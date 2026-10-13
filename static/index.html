@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A focused workspace for analytical writing, with grade-aware practice assignments and feedback.">
+  <title>Reasoning Studio — Analytical writing</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%233e51db'/%3E%3Ctext x='12' y='34' fill='white' font-size='32'%3E✦%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css?v=1">
+  <script src="/static/app.js?v=1" defer></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="/" aria-label="Reasoning Studio home"><span class="brand-mark">✦</span> Reasoning<span>Studio</span></a><a href="#workspace" class="nav-link">Writing workspace <span aria-hidden="true">↗</span></a><span class="tag">Built for better thinking</span></header>
+<main>
+<section class="hero"><div class="eyebrow"><span></span> ANALYTICAL WRITING, MADE CLEARER</div><h1>Good writing starts<br>with <em>good reasoning.</em></h1><p>A focused space to build your claim, connect your evidence, and make your next draft stronger.</p><div class="hero-tags"><span>Grade-aware feedback</span><span>Original practice assignments</span><span>Your voice, preserved</span></div></section>
+<div class="workspace" id="workspace">
+<aside class="settings panel"><div class="panel-heading"><span class="step">✦</span><h2>Your classroom</h2></div><p class="muted">Set the level. We’ll meet you there.</p>
+<label for="grade">Grade level</label><select id="grade" disabled><option>Loading…</option></select>
+<label for="class_level">Class level</label><select id="class_level" disabled><option>Loading…</option></select>
+<div class="divider"></div><h3>API access <span class="small-tag">YOUR KEY</span></h3><label for="api-key">Anthropic key</label><div class="key-input"><input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"><button id="toggle-key" type="button" aria-label="Show API key" aria-pressed="false">Show</button></div><p id="key-status" class="small muted">Only held in this tab. Never saved to browser storage.</p>
+<details><summary>Model settings</summary><label for="model">Anthropic model</label><input id="model" value="claude-haiku-4-5" maxlength="120"></details>
+<p class="privacy">Your assignment and writing are sent to Anthropic only when you generate material or request feedback.</p>
+</aside>
+<div class="editor">
+<section class="panel"><div class="panel-heading"><span class="step">01</span><div><h2>Set your assignment</h2><p class="muted">Bring your own text, or find a starting point.</p></div></div>
+<label for="mode">Question & source support</label><select id="mode"><option value="own">Use my own question and source</option><option value="question">Generate a question from my source</option><option value="both">Generate a practice source and question</option></select>
+<div id="generation-controls" hidden><label for="topic">Topic or focus <span class="optional">optional</span></label><input id="topic" maxlength="1000" placeholder="e.g. fairness, technology, or narrative imagery"><p class="small muted">Matches your grade and class. Only empty fields are generated; existing work stays yours.</p><button id="generate" class="button secondary" type="button">✦ Generate missing material</button></div>
+<div id="generation-message" role="status" aria-live="polite" hidden></div>
+<label for="question">Analytical question <span class="optional">optional for open analysis</span></label><input id="question" maxlength="4000" placeholder="How does the author’s choice of evidence develop their argument?">
+<label for="source">Source text</label><textarea id="source" rows="8" maxlength="60000" placeholder="Paste the passage, excerpt, or data you are analyzing."></textarea><p id="generated-note" class="small muted" hidden>Original AI-generated practice passage. Review and edit before use.</p>
+</section>
+<section class="panel"><div class="panel-heading"><span class="step">02</span><div><h2>Build your analysis</h2><p class="muted">A claim. The evidence. Your explanation of why it matters.</p></div></div>
+<label for="paragraph">Analytical paragraph</label><textarea id="paragraph" rows="10" maxlength="20000" placeholder="State your claim, choose specific evidence, and explain the connection in your own words."></textarea><div class="editor-footer"><span id="word-count">0 words · 0 characters</span><span>Your voice comes first.</span></div>
+<details class="rubric"><summary>Teacher instructions & grading criteria</summary><label for="extra">Teacher instructions or rubric <span class="optional">optional</span></label><textarea id="extra" rows="3" maxlength="8000" placeholder="e.g. Focus on rhetorical choices. Ignore spelling."></textarea><h3 id="criteria-title">Expectations for your classroom</h3><p id="grade-criteria" class="criteria"></p><p id="class-criteria" class="criteria"></p><details><summary>Core analytical criteria</summary><p id="core-criteria" class="criteria"></p></details></details>
+<button id="grade-button" class="button primary" type="button" disabled>Get analytical feedback <span aria-hidden="true">→</span></button><p class="small muted centered">A score, specific comments, and actionable next steps. No automatic rewrites.</p><div id="feedback-message" role="status" aria-live="polite" hidden></div>
+</section>
+<section class="panel feedback-panel" id="feedback-panel"><div class="panel-heading"><span class="step">03</span><div><h2>Review & revise</h2><p class="muted">Progress happens one thoughtful revision at a time.</p></div></div><div id="feedback-empty" class="empty-state"><span>↗</span><h3>Your next draft starts here.</h3><p>Submit your paragraph to get feedback on your claim, evidence, and reasoning.</p></div><p id="stale-note" class="message warning" hidden>Your writing or settings changed. This feedback is for your earlier submission.</p><div id="feedback-content" class="feedback-content" hidden></div><button id="download" class="button secondary" type="button" hidden>↓ Download feedback</button></section>
+</div></div>
+<footer><span>Reasoning Studio</span><span>Less guesswork. More insight.</span></footer>
+</main>
+</body>
+</html>
