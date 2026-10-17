@@ -50,8 +50,8 @@ def train(args, summary, splits):
         raise ValueError('Synthetic demo data cannot train a production adapter. Collect teacher-reviewed examples first.')
     if not summary.get('commercial_use_permissions_confirmed'):
         raise ValueError('Commercial training requires explicit commercial-use permission for every writing, source, score and feedback record.')
-    if args.model != 'Qwen/Qwen2.5-7B-Instruct':
-        raise ValueError('This tested configuration targets Qwen/Qwen2.5-7B-Instruct only. Nemotron Ultra requires NVIDIA’s architecture-specific multi-GPU recipe.')
+    if args.model not in ('Qwen/Qwen2.5-1.5B-Instruct','Qwen/Qwen2.5-7B-Instruct'):
+        raise ValueError('This recipe supports the Qwen2.5 1.5B and 7B Instruct architectures; GPU execution remains unverified here. Nemotron Ultra requires NVIDIA’s architecture-specific multi-GPU recipe.')
     if not args.model or not args.revision or not re.fullmatch(r'[a-fA-F0-9]{40}',args.revision):
         raise ValueError('Supply a licensed model ID and a pinned 40-character Hugging Face commit revision.')
     missing = [k for k,v in summary['dependencies_present'].items() if not v]

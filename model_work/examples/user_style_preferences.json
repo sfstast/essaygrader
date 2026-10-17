@@ -1,0 +1,67 @@
+{
+  "provenance": "user_supplied_style_preferences",
+  "independent_teacher_reviewed": false,
+  "commercial_rights_independently_verified": false,
+  "used_for_numeric_grader_training": false,
+  "used_in_free_gpu_commentary_run": false,
+  "policy": [
+    "Clarity, concision and specificity are useful across genres.",
+    "Assess first person, passive voice and sentence length by their purpose, not automatic penalties.",
+    "Show rather than tell applies selectively to narrative; analytical writing must explain its inferences.",
+    "Keep analysis, evidence, organization and mechanics scores independent.",
+    "Do not map percentages into missing 1–4 criterion labels."
+  ],
+  "pairs": [
+    {
+      "id": "user-weather-style",
+      "genre": "descriptive_narrative",
+      "less_preferred": "The weather outside was really bad and cold. It started to rain heavily. I walked fast to get home because I didn’t want to get soaking wet. My clothes got all wet anyway and I was shivering so much. It was a very miserable day.",
+      "preferred": "A slate-grey sky pressed down on the pavement as icy droplets hammered the gutters. I pulled my collar tight and broke into a sprint, chasing the amber glow of my front porch, though the autumn chill had already soaked through my coat.",
+      "user_supplied_ratings": {
+        "less_preferred": {
+          "letter": "D",
+          "percent": 60
+        },
+        "preferred": {
+          "letter": "A",
+          "percent": 95
+        }
+      },
+      "preference_reasons": [
+        "Concrete sensory detail rather than generic labels.",
+        "Less needless repetition and intensification.",
+        "Purposeful sentence variation and specific verbs."
+      ],
+      "limitations": [
+        "Narrative style preference, not evidence of analytical reasoning.",
+        "A concise, plain narrative can also be strong; imagery is not mandatory in every genre."
+      ]
+    },
+    {
+      "id": "user-social-media-style",
+      "genre": "academic_argumentative",
+      "less_preferred": "In this essay, I am going to talk about why social media is bad for teenagers. Social media makes teens feel bad about themselves because they see pictures of other people looking perfect. A lot of studies show that social media causes depression. Therefore, we should probably try to spend less time on our phones.",
+      "preferred": "Unrelenting exposure to curated digital feeds fosters chronic social comparison among adolescents. Rather than merely documenting reality, platforms like Instagram prompt users to measure their lived experiences against idealized highlights, a dynamic increasingly linked to rising rates of adolescent anxiety and depressive symptoms.",
+      "user_supplied_ratings": {
+        "less_preferred": {
+          "letter": "D+",
+          "percent": 68
+        },
+        "preferred": {
+          "letter": "A-",
+          "percent": 91
+        }
+      },
+      "preference_reasons": [
+        "A focused assertion rather than an announcement.",
+        "A more explicit proposed mechanism connecting comparison and distress.",
+        "More precise description of the proposed relationship."
+      ],
+      "limitations": [
+        "Neither paragraph supplies studies, source text, or independently checkable evidence.",
+        "Preferred prose does not justify a high evidence or source-accuracy grade.",
+        "Causation and empirical associations require evidence; a confident tone cannot establish them."
+      ]
+    }
+  ]
+}
