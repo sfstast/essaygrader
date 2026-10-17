@@ -18,12 +18,15 @@
   ],
   "commercial_training_permission_basis": "user_attestation_of_authority_in_chat",
   "training_performed": false,
-  "prepared_dataset": "model_work/prepared/thoughtful-v1",
+  "prepared_dataset": "model_work/prepared/thoughtful-audited-v2",
   "native_labels": [
     "Strong",
     "Good",
     "Okay",
     "Poor"
   ],
-  "terms_url": "https://k12.thoughtfullearning.com/terms"
+  "terms_url": "https://k12.thoughtfullearning.com/terms",
+  "eligible_after_audit": 207,
+  "quarantined_records": 1,
+  "audit_report": "model_work/THOUGHTFUL_AUDIT.md"
 }

@@ -44,3 +44,19 @@ class ThoughtfulTests(unittest.TestCase):
         self.assertNotIn('files.upload',setup)
         self.assertIn('model_work.thoughtful_learning',setup)
         self.assertIn('tempfile.mkdtemp',setup)
+
+    def test_summary_source_is_separate_from_student_writing(self):
+        html='''<div class="assessmentModelDesc assessmentQualOkay"></div>
+        <div class="field-name-body"><div><h3>Original Reading Selection</h3><p>Source facts.</p></div>
+        <div><h3>Student Summary</h3><p>Student response.</p></div></div>'''
+        row=parse_page(html,'https://k12.thoughtfullearning.com/assessmentmodels/sample')
+        self.assertEqual(row['writing'],'Student response.')
+        self.assertEqual(row['source_reading'],'Source facts.')
+        self.assertIn('Source reading (not student writing):\nSource facts.',messages(row)[1]['content'])
+        self.assertEqual(row['title'],'Student Summary')
+
+    def test_index_rating_is_read_independently(self):
+        from model_work.thoughtful_learning import index_ratings
+        html='''<div class="field-content"><a href="/assessmentmodels/sample">Example</a>
+        <span class="assessmentModelListRating">Okay</span></div>'''
+        self.assertEqual(index_ratings(html),{'https://k12.thoughtfullearning.com/assessmentmodels/sample':'Okay'})
