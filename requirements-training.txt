@@ -1,0 +1,7 @@
+-r requirements.txt
+# Install only on a CUDA training worker; not needed for the website.
+torch>=2.5,<3
+transformers>=4.46,<5
+peft>=0.14,<1
+accelerate>=1,<2
+bitsandbytes>=0.45,<1

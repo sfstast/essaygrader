@@ -4,3 +4,7 @@ __pycache__/
 .env
 .env.*
 .streamlit/secrets.toml
+model_work/data/
+model_work/prepared/
+model_work/runs/
+model_work/adapters/

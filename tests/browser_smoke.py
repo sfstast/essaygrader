@@ -69,6 +69,32 @@ try:
         with page.expect_download() as download:
             page.locator('#download').click()
         assert download.value.suggested_filename == 'analytical-feedback.md'
+        page.locator('#provider').select_option('nvidia')
+        assert page.locator('#api-key').input_value() == ''
+        assert 'nvidia/nemotron-3-ultra' in page.locator('#model').input_value()
+        page.locator('#api-key').fill('test-nvidia-key')
+        def tutoring(route):
+            data = route.request.post_data_json
+            assert data['provider'] == 'nvidia'
+            assert data['grade'] == 'Grade 7'
+            assert route.request.headers['x-model-key'] == 'test-nvidia-key'
+            route.fulfill(json={'reply':'Focus on why the volunteer stays. What does that reveal about their motive?'})
+        page.route('**/api/tutor',tutoring)
+        page.locator('#tutor-question').fill('How can I explain my evidence?')
+        page.locator('#tutor-send').click()
+        page.wait_for_function("document.querySelectorAll('.tutor-turn').length === 2")
+        assert 'volunteer' in page.locator('#tutor-conversation').inner_text()
+        page.locator('#paragraph').fill('A new revised paragraph.')
+        assert page.locator('.tutor-turn').count() == 0
+        assert 'new tutoring conversation' in page.locator('#tutor-message').inner_text()
+        page.locator('summary',has_text='Teacher instructions & grading criteria').click()
+        with page.expect_download() as review_download:
+            page.locator('#review-template').click()
+        template = json.loads(Path(review_download.value.path()).read_text())
+        assert template['teacher_scores'][0]['score'] is None
+        assert template['permission_to_use'] is False
+        assert template['paragraph'] == 'A new revised paragraph.'
+        page.locator('summary',has_text='Teacher instructions & grading criteria').click()
         page.evaluate('scrollTo(0, 0)')
         page.wait_for_timeout(350)
         page.screenshot(path='/tmp/reasoning-studio-desktop.png', full_page=True)
@@ -79,7 +105,7 @@ try:
         page.screenshot(path='/tmp/reasoning-studio-mobile.png', full_page=True)
         assert not errors, errors
         browser.close()
-    print('PASS browser: rendering, manual key, generation, grading, word count, safe feedback, stale notice, download, mobile layout')
+    print('PASS browser: rendering, manual key, generation, grading, word count, safe feedback, stale notice, download, provider key isolation, tutoring, teacher review export, mobile layout')
 finally:
     server.terminate()
     server.wait(timeout=10)

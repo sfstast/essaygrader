@@ -1,0 +1,28 @@
+{
+  "id": "example-001",
+  "student_id": "anonymous-student-001",
+  "assignment_id": "anonymous-assignment-001",
+  "grade": "Grade 11",
+  "class_level": "On-level / regular",
+  "task": "grade",
+  "source": "REPLACE with the actual source passage, stripped of personal information.",
+  "question": "REPLACE with the analytical question.",
+  "paragraph": "REPLACE with the student's anonymized writing.",
+  "rubric": "REPLACE with the teacher's 1\u201310 analytical-reasoning rubric, including score anchors.",
+  "teacher_scores": [
+    {
+      "rater_id": "anonymous-teacher-1",
+      "score": null
+    },
+    {
+      "rater_id": "anonymous-teacher-2",
+      "score": null
+    }
+  ],
+  "teacher_feedback": "REPLACE with adjudicated, teacher-reviewed feedback and revision advice; the scores above are placeholders.",
+  "student_message": "",
+  "subgroup": "unspecified",
+  "permission_to_use": false,
+  "anonymized": false,
+  "provenance": "teacher_reviewed"
+}

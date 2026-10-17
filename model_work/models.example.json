@@ -1,0 +1,5 @@
+[
+  {"name":"claude_baseline","provider":"anthropic","model":"claude-haiku-4-5","key_env":"ANTHROPIC_API_KEY","enabled":true},
+  {"name":"small_open_baseline","provider":"open_model","model":"Qwen/Qwen2.5-7B-Instruct","key_env":"OPEN_MODEL_API_KEY","enabled":true},
+  {"name":"nemotron_ultra","provider":"nvidia","model":"nvidia/nemotron-3-ultra-550b-a55b","key_env":"NVIDIA_API_KEY","enabled":false}
+]

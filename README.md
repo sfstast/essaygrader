@@ -11,7 +11,7 @@ python -m pip install -r requirements.txt
 python -m uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-Open port 8000 through your host's preview or port forwarding. For local development, open `http://localhost:8000`. Enter your Anthropic key in the settings panel. The key stays in the current tab's memory and is sent to the backend over the deployment's HTTPS connection. It is never stored in browser storage or included in feedback downloads. Refreshing clears the current work and manual key. The API does not persist submissions or keys.
+Open port 8000 through your host's preview or port forwarding. For local development, open `http://localhost:8000`. Choose a model provider and enter its key in the settings panel. The key stays in the current tab's memory and is sent to the backend over the deployment's HTTPS connection. It is never stored in browser storage or included in feedback downloads. Refreshing clears the current work and manual key. The API does not persist submissions or keys.
 
 Select grade and class, supply or generate assignment material, then submit a paragraph. Only empty fields are generated. Feedback persists while editing and is marked stale when its inputs change.
 
@@ -26,7 +26,7 @@ The HTML version needs a Python web host (for example Render or Railway); Stream
 - Health check: `/api/health`
 - Python: 3.12 or newer
 
-Use HTTPS and allow outbound requests to `api.anthropic.com`. No saved API key is required: each user enters their own. `app.py` is retained for existing Streamlit deployments.
+Use HTTPS and allow outbound requests to `api.anthropic.com` for Claude or `integrate.api.nvidia.com` for hosted NVIDIA models. No saved API key is required: each user enters their own. `app.py` is retained for existing Streamlit deployments.
 
 ## Tests
 
@@ -38,3 +38,9 @@ python tests/browser_smoke.py
 ```
 
 API and browser tests use mocked Anthropic responses, never a real key or paid requests. Browser tests start their own isolated local server. Live model access must be checked separately with your key.
+
+## Open models, teacher-data collection and tutoring
+
+The HTML app supports Claude, hosted NVIDIA Nemotron, and a server-configured OpenAI-compatible model (including a separately served fine-tuned adapter). Pick the provider in **Your classroom**, enter its key, and select a model available to your account. Switching providers clears the key. A separate writing-tutor panel offers hints and follow-up questions; its effectiveness still needs independent teacher evaluation.
+
+See [the model development guide](model_work/README.md) for teacher-review templates, protected train/validation/test splits, reproducible comparisons, and an opt-in Qwen LoRA/QLoRA recipe. No real training or model-quality benchmark has been completed: there is no teacher-reviewed dataset, GPU, or live inference credential in this environment. Synthetic fixtures only test software behavior.
