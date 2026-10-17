@@ -5,6 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
+from urllib.request import urlopen
 
 from model_work.data import messages_for, read_examples, split_examples
 
@@ -25,8 +26,9 @@ def preflight(directory):
         if ids != sorted(manifest['splits'][name]) or ids != sorted(r.id for r in expected[name]):
             raise ValueError('Dataset splits do not match the leakage-protected manifest.')
     demo = manifest.get('demo_only', True) or any(r.provenance != 'teacher_reviewed' for r in records)
-    summary = {'training_performed':False, 'demo_only':demo, 'examples':{k:len(v) for k,v in splits.items()},
-               'data_eligible_for_training':not demo, 'test_used_for_training':False,
+    commercial = all(r.commercial_use_allowed for r in records)
+    summary = {'training_performed':False, 'demo_only':demo, 'commercial_use_permissions_confirmed':commercial, 'examples':{k:len(v) for k,v in splits.items()},
+               'data_eligible_for_training':not demo and commercial, 'test_used_for_training':False,
                'dependencies_present':{name:importlib.util.find_spec(name) is not None for name in ('torch','transformers','peft','accelerate')}}
     return summary, splits
 
@@ -44,8 +46,10 @@ def tokenize_example(tokenizer, messages, max_length):
 
 
 def train(args, summary, splits):
-    if not summary['data_eligible_for_training']:
+    if summary['demo_only']:
         raise ValueError('Synthetic demo data cannot train a production adapter. Collect teacher-reviewed examples first.')
+    if not summary.get('commercial_use_permissions_confirmed'):
+        raise ValueError('Commercial training requires explicit commercial-use permission for every writing, source, score and feedback record.')
     if args.model != 'Qwen/Qwen2.5-7B-Instruct':
         raise ValueError('This tested configuration targets Qwen/Qwen2.5-7B-Instruct only. Nemotron Ultra requires NVIDIA’s architecture-specific multi-GPU recipe.')
     if not args.model or not args.revision or not re.fullmatch(r'[a-fA-F0-9]{40}',args.revision):
@@ -56,6 +60,19 @@ def train(args, summary, splits):
     import torch
     if not torch.cuda.is_available():
         raise ValueError('GPU training requires a CUDA worker; no model has been downloaded.')
+    # Verify the actual pinned model-card and weight-license files, not the
+    # framework's code license. Refuse missing/ambiguous commercial eligibility.
+    license_url=f'https://huggingface.co/{args.model}/raw/{args.revision}/LICENSE'
+    card_url=f'https://huggingface.co/{args.model}/raw/{args.revision}/README.md'
+    try:
+        with urlopen(license_url,timeout=30) as response: license_bytes=response.read()
+        with urlopen(card_url,timeout=30) as response: card_text=response.read().decode()
+    except OSError:
+        raise ValueError('Cannot verify the pinned model weight license. No model weights were downloaded.') from None
+    if not re.search(r'^license:\s*apache-2\.0\s*$',card_text,re.MULTILINE) or not re.search(r'Apache License.*?Version 2\.0',license_bytes.decode(),re.DOTALL):
+        raise ValueError('The pinned Qwen weights do not have the expected Apache-2.0 declaration; stop for license review.')
+    license_evidence={'model_weight_license':'Apache-2.0','license_url':license_url,
+                      'license_sha256':hashlib.sha256(license_bytes).hexdigest()}
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer, TrainingArguments
     output = Path(args.out)
@@ -94,7 +111,7 @@ def train(args, summary, splits):
     trainer.save_model(str(output/'adapter'))
     tokenizer.save_pretrained(str(output/'adapter'))
     (output/'training-summary.json').write_text(json.dumps({**summary,'training_performed':True,
-        'model':args.model,'revision':args.revision,'max_length':args.max_length,'qlora':args.qlora,
+        'model':args.model,'revision':args.revision,'max_length':args.max_length,'qlora':args.qlora,**license_evidence,
         'evaluation_required':'Evaluate on the untouched test split and perform independent teacher review before deployment.'},indent=2)+'\n')
 
 

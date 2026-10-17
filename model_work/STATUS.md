@@ -1,23 +1,24 @@
-# Implementation status — October 17, 2026
+# Status — October 17, 2026
 
-Implemented and locally verified:
+The user requires commercial use and comprehensive analytical-reasoning assessment. Language-proficiency scoring and crowd convincingness must not be presented as teacher-validated analytical grades.
 
-- Manual-key Claude/NVIDIA/OpenAI-compatible provider selection, with no arbitrary client-selected server URL and no key reuse across providers.
-- Separate grade-aware writing-tutor endpoint/panel. Teacher effectiveness review is still required.
-- Local teacher-review export, reviewed-file collection, schema checks, connected-component split isolation and split-integrity hashes.
-- Reproducible grading comparisons: independent teacher references, repeat variation, one injection probe, failure accounting, latency, subgroup breakdowns and a per-model teacher tutoring review queue.
-- Synthetic no-inference benchmark planning and training preflight. Demo metrics stay null, and demos are blocked from training.
-- Qwen-only LoRA/QLoRA script with assistant-token supervision. GPU execution and training dependencies have not been validated on a CUDA worker.
+## Completed
 
-Validation evidence: 26 unit/API/data/evaluation tests passed; real Chromium desktop/mobile checks passed with mocked model calls. Current cloud server renders the new controls. These are software checks, not grading-accuracy or tutoring-efficacy results.
+- Found and audited author-published datasets. Excluded NC-licensed ELLIPSE, PERSUADE and argumentative microtexts from commercial training. Removed the exploratory ELLIPSE downloads; no model was trained on them.
+- Downloaded/pinned/hash-verified UKPConvArg1 (CC BY 4.0), with original-source attribution. Prepared 11,642 human-judged argument pairs across 16 topics; 2,662 have agreeing high-competence human explanations. Labels are crowdsourced relative preferences, not teacher grades or source-fidelity judgments.
+- Actually trained and tested a CPU TF-IDF/logistic argument-quality candidate. Training: 7,355 pairs / 10 topics. Validation: 2,416 / 3. Test: 1,871 / 3. Held-out accuracy: 71.8%; majority baseline: 50.8%; longer-argument baseline: 73.9%. The candidate is rejected for analytical grading and is not wired into the app's grading decisions.
+- Added two attributed, commercially licensed human-preference examples, explicitly labeled as not teacher/source-based analytical grades.
+- Added an original six-criterion analytical rubric with grade/class calibration, checkable source/student excerpts, evidence-to-claim commentary, complexity limits, and revision questions. Overall grades are computed from criterion scores; missing/fabricated quotation links are rejected. Summary-only, off-task, unsupported central inferences, missing evidence and major misreadings limit grades. These are output/guardrail policies, not validated model accuracy.
+- Teacher-review export/collection, split protection, provider selection, tutoring and LoRA preflight remain available. Commercial LoRA requires explicit commercial-use data permissions and a pinned Qwen weight-license check. No copyrighted exam sample or AI-generated label was silently relabeled as commercially licensed teacher data.
 
-Not completed:
+Software verification: 36 unit/API/data/rubric tests passed. Chromium desktop/mobile checks passed with mocked provider responses. The saved CPU candidate hash and a persisted prediction were replay-verified. These checks do not establish analytical-grading accuracy.
 
-- No real teacher-scored writing dataset has been supplied; the user confirmed this.
-- No live comparison between Claude, Qwen and Nemotron has run. No model has been fine-tuned, selected as superior, or deployed as a trained grader.
-- No CUDA device or inference credentials were available in the execution environment.
-- A read-only NVIDIA connectivity check was denied by the network proxy. Allow `integrate.api.nvidia.com` in environment settings for hosted NVIDIA requests; retain `api.anthropic.com` for Claude. The Anthropic endpoint returned an authentication-required response without credentials.
-- Environment configuration could not be read or updated: the configuration tool reported its draft/configuration unavailable and requested reopening/recovering the onboarding draft. No new domain rule or startup instructions were persisted by that tool in this session. Repository startup instructions remain in README.md.
-- Public deployment and live provider/model access are unverified. User keys remain entered manually on the site.
+## Remaining limits
 
-Next: collect anonymized, permitted teacher-reviewed examples with two independent scores per grading sample using the app's teacher-review download. Prepare independent splits, run real baselines with provider access, and only then decide whether the smaller-model GPU fine-tuning step is justified.
+- No commercially cleared, task-matched, teacher-scored source-based analytical-writing dataset has been established in this search. Do not pretend crowd preferences fill that gap.
+- No NVIDIA/Qwen/Claude analytical-reasoning inference benchmark or large-model fine-tuning ran. There is no CUDA GPU or inference credential in this environment.
+- Hugging Face model-card/weight-license access is blocked. The future Qwen GPU training script checks the actual pinned card/license instead of assuming its framework license applies to weights. NVIDIA model/service terms also need checking for the chosen product; the code does not claim that arbitrary selected weights are commercially cleared.
+- The API rubric's semantic judgments, score calibration, grade-level appropriateness and tutoring effectiveness still need independent human validation. Checking whether a quotation exists does not prove its interpretation is correct.
+- No public deployment or commercial release is claimed. Hosted provider calls need the user's account/key, network access and appropriate provider terms. The unavailable cloud configuration draft was not changed.
+
+See [COMMERCIAL_USE.md](COMMERCIAL_USE.md), [the real experiment report](reports/argument-quality-commercial-v1.json), and the main README for exact reproduction steps. Private raw data, vocabularies and model artifacts are ignored by Git; only the cleared attributed examples and aggregate results are published.

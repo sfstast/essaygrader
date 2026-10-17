@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/scrosseye/ELLIPSE-Corpus.git",
+  "commit": "dc3b8f0b3b4332fc9f64302c4ccfc4ed582f4b43",
+  "license": "CC-BY-NC-SA-4.0",
+  "decision": "excluded_from_commercial_training",
+  "reason": "Noncommercial license and proficiency-only scoring do not meet product requirements.",
+  "training_performed": false,
+  "raw_downloads_removed": true
+}

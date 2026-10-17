@@ -1,0 +1,83 @@
+{
+  "title": "Commercially licensed human argument-preference examples",
+  "source": {
+    "repository": "https://github.com/UKPLab/acl2016-convincing-arguments",
+    "commit": "ca9d24e41b8805ff2e1d3585d552b49bb64a65f7",
+    "archive_sha256": "2eabdbf837449ca21e40775b66094d2c9cb37119b5d5d0190ab422ee6307f5b0",
+    "license": "CC-BY-4.0",
+    "citation": "Ivan Habernal and Iryna Gurevych (2016). Which argument is more convincing? Analyzing and predicting convincingness of Web arguments using bidirectional LSTM. ACL, 1589–1599.",
+    "paper": "https://aclanthology.org/P16-1150/",
+    "source_argument_licenses": [
+      "CC-BY-3.0 (CreateDebate)",
+      "Public domain (ConvinceMe), as documented by corpus authors"
+    ],
+    "label_origin": "Human crowdsourcing, aggregated by the corpus authors; not teacher grades.",
+    "scope": "Pairwise convincingness, not factual correctness, source-grounded analytical grading or tutoring efficacy."
+  },
+  "not_teacher_grades": true,
+  "not_source_based_analytical_scores": true,
+  "records": [
+    {
+      "id": "2a7a458dfe9f202d31849445",
+      "topic": "Should physical education be mandatory in schools?",
+      "a1": "I HATE P.E. I have to run so much and I hate it soooo much!!!!!",
+      "a2": "Core classes are more important. Kids should be more focused on learning, and the competitiveness can cause bullying.",
+      "label": "a2",
+      "human_vote_count": 5,
+      "human_agreement_fraction": 1.0,
+      "human_reasons": [
+        "A1 only presents a personal opinion"
+      ],
+      "label_origin": "Human crowdsourcing, aggregated by the corpus authors; not teacher grades.",
+      "license": "CC-BY-4.0",
+      "attribution": {
+        "a1": [
+          {
+            "author_url": "Emicode10",
+            "source_debate_url": "http://www.createdebate.com/debate/show/Should_physical_education_be_mandatory_in_schools",
+            "source_argument_id": "arg216633"
+          }
+        ],
+        "a2": [
+          {
+            "author_url": "soccergirl23",
+            "source_debate_url": "http://www.createdebate.com/debate/show/Should_physical_education_be_mandatory_in_schools",
+            "source_argument_id": "arg407143"
+          }
+        ]
+      },
+      "usage_note": "A relative human crowd preference, not a teacher-scored source-based analysis. Do not infer factual truth or an absolute school grade."
+    },
+    {
+      "id": "828babbaff7245c0ea9e3574",
+      "topic": "Is the school uniform a good or bad idea?",
+      "a1": "I think that such a policy is a good idea. Uniforms make students equal on an economic level This can be prevent envy and jealousy.",
+      "a2": "This is very. Bad as the uniforms are also cost effective",
+      "label": "a1",
+      "human_vote_count": 5,
+      "human_agreement_fraction": 1.0,
+      "human_reasons": [
+        "A1 explains their point and is to the point, A2 doesn't seem to have a solid opinion."
+      ],
+      "label_origin": "Human crowdsourcing, aggregated by the corpus authors; not teacher grades.",
+      "license": "CC-BY-4.0",
+      "attribution": {
+        "a1": [
+          {
+            "author_url": "hottest",
+            "source_debate_url": "http://www.createdebate.com/debate/show/Is_the_school_uniform_a_good_or_bad_idea",
+            "source_argument_id": "arg203291"
+          }
+        ],
+        "a2": [
+          {
+            "author_url": "Roshu",
+            "source_debate_url": "http://www.createdebate.com/debate/show/Is_the_school_uniform_a_good_or_bad_idea",
+            "source_argument_id": "arg580102"
+          }
+        ]
+      },
+      "usage_note": "A relative human crowd preference, not a teacher-scored source-based analysis. Do not infer factual truth or an absolute school grade."
+    }
+  ]
+}

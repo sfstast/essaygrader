@@ -24,5 +24,6 @@
   "subgroup": "unspecified",
   "permission_to_use": false,
   "anonymized": false,
-  "provenance": "teacher_reviewed"
+  "provenance": "teacher_reviewed",
+  "commercial_use_allowed": false
 }

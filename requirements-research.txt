@@ -1,0 +1,5 @@
+-r requirements.txt
+# CPU-only argument-quality experiment; no large language model downloads.
+scikit-learn>=1.5,<2
+joblib>=1.4,<2
+threadpoolctl>=3.5,<4

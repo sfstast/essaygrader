@@ -148,7 +148,7 @@ $('review-template').addEventListener('click', () => {
     rubric:'REPLACE with the teacher rubric and 1–10 score anchors.',
     teacher_scores:[{rater_id:'REPLACE-teacher-1',score:null},{rater_id:'REPLACE-teacher-2',score:null}],
     teacher_feedback:'REPLACE with adjudicated teacher feedback, not AI feedback.',student_message:'',subgroup:'unspecified',
-    permission_to_use:false,anonymized:false,provenance:'teacher_reviewed'};
+    permission_to_use:false,anonymized:false,commercial_use_allowed:false,provenance:'teacher_reviewed'};
   const url = URL.createObjectURL(new Blob([JSON.stringify(review,null,2)],{type:'application/json'}));
   const link = document.createElement('a'); link.href=url;link.download='teacher-review.json';link.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);

@@ -93,6 +93,7 @@ try:
         template = json.loads(Path(review_download.value.path()).read_text())
         assert template['teacher_scores'][0]['score'] is None
         assert template['permission_to_use'] is False
+        assert template['commercial_use_allowed'] is False
         assert template['paragraph'] == 'A new revised paragraph.'
         page.locator('summary',has_text='Teacher instructions & grading criteria').click()
         page.evaluate('scrollTo(0, 0)')

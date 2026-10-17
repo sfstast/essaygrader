@@ -93,6 +93,20 @@ class DataTests(unittest.TestCase):
         self.assertNotIn('Score overall analytical reasoning',system)
         self.assertIn('not a score',system)
 
+    def test_commercial_training_needs_explicit_rights(self):
+        with TemporaryDirectory() as temp:
+            dataset=Path(temp)/'reviews.jsonl'
+            rows=[]
+            for row in self.rows:
+                copy=row.model_copy(deep=True);copy.provenance='teacher_reviewed';rows.append(copy)
+            dataset.write_text(''.join(row.model_dump_json()+'\n' for row in rows))
+            prepared=Path(temp)/'prepared';prepare(dataset,prepared)
+            report,splits=preflight(prepared)
+            self.assertFalse(report['commercial_use_permissions_confirmed'])
+            self.assertFalse(report['data_eligible_for_training'])
+            with self.assertRaisesRegex(ValueError,'Commercial training'):
+                train(SimpleNamespace(),report,splits)
+
     def test_supervised_tokens_mask_prompt_and_reject_truncation(self):
         tokenizer = MagicMock()
         tokenizer.apply_chat_template.side_effect = [[1,2],[1,2,3,4]]

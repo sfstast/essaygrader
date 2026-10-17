@@ -34,6 +34,7 @@ class Example(BaseModel):
     subgroup: str = Field(default='unspecified', max_length=100)
     permission_to_use: StrictBool
     anonymized: StrictBool
+    commercial_use_allowed: StrictBool = False
     provenance: Literal['teacher_reviewed', 'synthetic_demo']
 
     @model_validator(mode='after')

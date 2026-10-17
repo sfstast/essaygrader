@@ -2,10 +2,12 @@
 
 This is an evaluation and teacher-data collection workflow, **not an already trained or validated writing model**. No real teacher-scored dataset, CUDA GPU or inference credentials were supplied during implementation. A synthetic pipeline check and mocked API/browser tests do not establish grading or tutoring quality.
 
+Commercial use is now required. Read [COMMERCIAL_USE.md](COMMERCIAL_USE.md) for the data-license audit, the completed human argument-quality experiment, and the source-grounded analytical rubric. The CPU candidate did not beat the longer-argument baseline and was not promoted. It is not a teacher-calibrated grader.
+
 ## Model choices
 
 - Claude Haiku 4.5 is the existing baseline.
-- `Qwen/Qwen2.5-7B-Instruct` is a much smaller open-weight baseline and the supported target for this LoRA script. Check its exact model card, license and revision before downloading or training. An OpenAI-compatible server such as vLLM can serve it or its adapter.
+- `Qwen/Qwen2.5-7B-Instruct` is a much smaller open-weight baseline and the supported target for this LoRA script. Check its exact model card, weight license and revision before downloading or training. The GPU script verifies the pinned Apache-2.0 weight-license declaration and refuses missing commercial-use data permissions. An OpenAI-compatible server such as vLLM can serve it or its adapter.
 - NVIDIA's [official model repository](https://github.com/NVIDIA-NeMo/Nemotron) and [Ultra usage guide](https://github.com/NVIDIA-NeMo/Nemotron/tree/main/usage-cookbook/Nemotron-3-Ultra) identify Nemotron 3 Ultra as a 550B-total / 55B-active model. Its hosted NVIDIA model ID is `nvidia/nemotron-3-ultra-550b-a55b`. It is an optional benchmark comparator, not this machine's local training target. Its architecture-specific, multi-GPU training recipes are linked from the official guide. Do not apply the small Qwen LoRA configuration to Ultra.
 
 Model IDs, access, licenses and provider availability can change. Nothing here establishes live access or quality for any model.
@@ -14,7 +16,7 @@ Model IDs, access, licenses and provider availability can change. Nothing here e
 
 In the app, expand **Teacher instructions & grading criteria** and choose **Download teacher review template**. This exports the current assignment locally with blank teacher scores; it does not collect data on the server and never copies AI feedback into teacher labels. Alternatively, use `templates/teacher-review.json`.
 
-Use stable anonymous student and assignment IDs, not names or contact details. Keep any re-identification key outside this repository. Remove personal information from the source, writing and feedback. Confirm appropriate permission before marking `permission_to_use` and `anonymized` true. Those flags are a required declaration, not an automatic anonymization check.
+Use stable anonymous student and assignment IDs, not names or contact details. Keep any re-identification key outside this repository. Remove personal information from the source, writing and feedback. Confirm appropriate permission before marking `permission_to_use` and `anonymized` true. Commercial fine-tuning additionally requires `commercial_use_allowed: true` for every record, covering the writing, source, ratings and feedback. Those flags are a required declaration, not an automatic anonymization check.
 
 For a grading record:
 

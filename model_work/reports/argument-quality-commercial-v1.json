@@ -1,0 +1,130 @@
+{
+  "task": "pairwise_argument_convincingness",
+  "model": "TF-IDF word/character differences + logistic regression",
+  "training_performed": true,
+  "large_language_model_trained": false,
+  "teacher_grades": false,
+  "commercial_data_license": "CC-BY-4.0",
+  "source": {
+    "repository": "https://github.com/UKPLab/acl2016-convincing-arguments",
+    "commit": "ca9d24e41b8805ff2e1d3585d552b49bb64a65f7",
+    "archive_sha256": "2eabdbf837449ca21e40775b66094d2c9cb37119b5d5d0190ab422ee6307f5b0",
+    "license": "CC-BY-4.0",
+    "citation": "Ivan Habernal and Iryna Gurevych (2016). Which argument is more convincing? Analyzing and predicting convincingness of Web arguments using bidirectional LSTM. ACL, 1589\u20131599.",
+    "paper": "https://aclanthology.org/P16-1150/",
+    "source_argument_licenses": [
+      "CC-BY-3.0 (CreateDebate)",
+      "Public domain (ConvinceMe), as documented by corpus authors"
+    ],
+    "label_origin": "Human crowdsourcing, aggregated by the corpus authors; not teacher grades.",
+    "scope": "Pairwise convincingness, not factual correctness, source-grounded analytical grading or tutoring efficacy."
+  },
+  "source_pair_count": 11642,
+  "splits": {
+    "test": {
+      "pairs": 1871,
+      "topics": 3
+    },
+    "validation": {
+      "pairs": 2416,
+      "topics": 3
+    },
+    "train": {
+      "pairs": 7355,
+      "topics": 10
+    }
+  },
+  "split_policy": "Debate-topic holdout, both stances grouped; cross-split exact argument duplicates removed. No claim of author-disjointness.",
+  "removed_cross_split_pairs": {
+    "test": 0,
+    "validation": 0,
+    "train": 0
+  },
+  "validation_candidates": [
+    {
+      "C": 0.1,
+      "validation": {
+        "accuracy": 0.75,
+        "balanced_accuracy": 0.74973608083467,
+        "macro_f1": 0.7498017979463798,
+        "pairs": 2416
+      }
+    },
+    {
+      "C": 1.0,
+      "validation": {
+        "accuracy": 0.7375827814569537,
+        "balanced_accuracy": 0.7374203101221568,
+        "macro_f1": 0.7374516209758422,
+        "pairs": 2416
+      }
+    },
+    {
+      "C": 10.0,
+      "validation": {
+        "accuracy": 0.7297185430463576,
+        "balanced_accuracy": 0.7295760841250909,
+        "macro_f1": 0.7295980515746543,
+        "pairs": 2416
+      }
+    }
+  ],
+  "selected_C": 0.1,
+  "test": {
+    "accuracy": 0.7183324425440941,
+    "balanced_accuracy": 0.7184942623325561,
+    "macro_f1": 0.718331155150866,
+    "pairs": 1871
+  },
+  "majority_baseline": {
+    "accuracy": 0.5082843399251737,
+    "balanced_accuracy": 0.5,
+    "macro_f1": 0.3369950389794472,
+    "pairs": 1871
+  },
+  "longer_argument_baseline": {
+    "accuracy": 0.7386424371993586,
+    "balanced_accuracy": 0.7386149590819732,
+    "macro_f1": 0.738591957348145,
+    "pairs": 1871
+  },
+  "test_by_topic": {
+    "Is porn wrong?": {
+      "accuracy": 0.7758318739054291,
+      "balanced_accuracy": 0.7751166789486612,
+      "macro_f1": 0.7753295298052332,
+      "pairs": 571
+    },
+    "Should physical education be mandatory in schools?": {
+      "accuracy": 0.8257042253521126,
+      "balanced_accuracy": 0.8252497672975488,
+      "macro_f1": 0.8254179667489405,
+      "pairs": 568
+    },
+    "Which type of endeavor is better, a personal pursuit or advancing the common good?": {
+      "accuracy": 0.5901639344262295,
+      "balanced_accuracy": 0.5911568746214415,
+      "macro_f1": 0.5901639344262295,
+      "pairs": 732
+    }
+  },
+  "trained_model_beats_longer_argument_baseline": false,
+  "tie_count": 0,
+  "artifact_sha256": "37b3a8545aebfe49e09c9f4b30ef3eb8a5c82f909ad56471e667a7fcab8c335c",
+  "runtime_seconds": 42.97646156104747,
+  "versions": {
+    "python": "3.12.14",
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.4"
+  },
+  "limitations": [
+    "Crowd convincingness is not teacher-scored analytical reasoning.",
+    "Persuasive arguments can still be factually wrong.",
+    "No source-passage fidelity or warrant validity labels.",
+    "No tutoring conversations or student-revision outcome evaluation.",
+    "A small topic holdout and public benchmark cannot establish production fairness or robust generalization.",
+    "The component is not automatically deployed or substituted for analytical grades."
+  ],
+  "production_grader_approved": false,
+  "promotion_decision": "Rejected for analytical grading: not a reasoning assessment task and below the longer-argument baseline."
+}

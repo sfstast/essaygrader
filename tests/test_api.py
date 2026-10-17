@@ -1,4 +1,6 @@
 import unittest
+import json
+from tests.assessment_fixture import assessment_fixture
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from server import app
@@ -50,11 +52,14 @@ class ApiTests(unittest.TestCase):
 
     @patch('server.request_text')
     def test_feedback_includes_question_and_grade(self, request):
-        request.return_value = '## Score\n7/10'
+        request.return_value = json.dumps(assessment_fixture('My source','My paragraph'))
         response = self.client.post('/api/feedback', headers=self.headers,
             json={'source': 'My source', 'paragraph': 'My paragraph', 'question': 'Why?', 'grade': 'Grade 8'})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['feedback'], '## Score\n7/10')
+        self.assertEqual(response.json()['score'],8)
+        self.assertIn('Commentary and evidence-to-claim reasoning',response.json()['feedback'])
+        self.assertTrue(response.json()['quotation_presence_verified'])
+        self.assertFalse(response.json()['teacher_calibrated'])
         self.assertIn('Why?', request.call_args.args[3])
         self.assertIn('Grade 8', request.call_args.args[3])
         self.assertIn('early high school', request.call_args.args[2])
