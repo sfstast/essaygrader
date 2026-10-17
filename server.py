@@ -1,3 +1,4 @@
+from writing_rubric import RUBRIC_ID, CRITERIA, rubric_text
 """Serve the lightweight website and its Anthropic-backed API."""
 import os
 import json
@@ -102,6 +103,7 @@ def health():
 @app.get('/api/config')
 def config():
     return {'grades': GRADE_LEVELS, 'classes': CLASS_LEVELS, 'model': MODEL, 'providers': providers(),
+            'training_rubric':{'id':RUBRIC_ID,'text':rubric_text(),'criteria':list(CRITERIA)},
             'assessment_rubric':{'name':'source_grounded_analytical_reasoning_v1',
                                  'criterion_weights':{key:weight for key,(_,weight) in DIMENSIONS.items()},
                                  'teacher_calibrated':False},

@@ -22,3 +22,5 @@ Software verification: 36 unit/API/data/rubric tests passed. Chromium desktop/mo
 - No public deployment or commercial release is claimed. Hosted provider calls need the user's account/key, network access and appropriate provider terms. The unavailable cloud configuration draft was not changed.
 
 See [COMMERCIAL_USE.md](COMMERCIAL_USE.md), [the real experiment report](reports/argument-quality-commercial-v1.json), and the main README for exact reproduction steps. Private raw data, vocabularies and model artifacts are ignored by Git; only the cleared attributed examples and aggregate results are published.
+
+Additional collection: historical CC-BY OpenStax release, 11 annotated student sample modules, 98 qualitative excerpt/comment pairs (53 train / 23 validation / 22 test). Reproducible collector and auxiliary LoRA path added. No numeric rubric scores invented. Preflight ran; full LLM training remains blocked by missing CUDA/training stack/model access. See OPENSTAX_ANNOTATIONS.md and reports/openstax-annotations-v1.json. The uploaded six-category rubric is separately supported for collecting genuine independent teacher ratings.

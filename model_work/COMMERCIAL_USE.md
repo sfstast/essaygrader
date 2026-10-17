@@ -58,3 +58,11 @@ The model must return scores and explanations for each criterion plus verbatim s
 - Large-model tuning still requires a CUDA worker and actual model access. No GPU, inference credentials or purchased compute were supplied; none was fabricated or provisioned as a hidden expense. No public model or product deployment is claimed here.
 
 The working path is a commercially cleared model plus the original analytical rubric, tested against task-matched, commercially permitted human assessments. The current changes prepare and harden that path; they do not claim a finished, commercially validated analytical grader.
+
+## Additional internet collection: annotated student writing
+
+The historical OpenStax *Writing Guide with Handbook* release at [`a6c95528390e3a2936f5bf87c49ac1a4995a0a6e`](https://github.com/openstax/osbooks-writing-guide/tree/a6c95528390e3a2936f5bf87c49ac1a4995a0a6e) states CC BY 4.0 in its LICENSE, README, collection metadata and preface. The current edition changed to CC BY-NC-SA on March 23, 2026; it is excluded. The historical CC BY grant covers the old material under its conditions; this is not permission to copy future editions or separately credited third-party works.
+
+We collected 11 annotated student sample modules and extracted 98 adjacent student-excerpt/editorial-comment pairs. Sixty-six quote-containing pairs were omitted conservatively to avoid carrying separately owned source quotations into the prepared set; art, external readings, cited works and author profiles are not training inputs. Attribution, original student author names in source titles, revision, source hashes and the historical license are retained. The comments are published editorial teaching commentary, not two independent teacher ratings. No numeric scores or grade levels were invented.
+
+The 53/23/22 train/validation/test split groups repeated essays by author and joins duplicated excerpts. It is an auxiliary qualitative-feedback dataset, not a calibration benchmark for the user's six-category rubric. No language-model training has run: the worker has no CUDA GPU or training dependencies, and the pinned base-model release still needs verification. See [the aggregate report](reports/openstax-annotations-v1.json) and [reproduction instructions](OPENSTAX_ANNOTATIONS.md).

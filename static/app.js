@@ -145,8 +145,8 @@ $('review-template').addEventListener('click', () => {
   const data = payload();
   const review = {id:'REPLACE-example-id',student_id:'REPLACE-anonymous-student-id',assignment_id:'REPLACE-assignment-id',
     grade:data.grade,class_level:data.class_level,task:'grade',source:data.source,question:data.question,paragraph:data.paragraph,
-    rubric:'REPLACE with the teacher rubric and 1–10 score anchors.',
-    teacher_scores:[{rater_id:'REPLACE-teacher-1',score:null},{rater_id:'REPLACE-teacher-2',score:null}],
+    rubric_id:config.training_rubric.id,rubric:config.training_rubric.text,
+    teacher_scores:['REPLACE-teacher-1','REPLACE-teacher-2'].map(rater_id => ({rater_id,score:null,criterion_scores:Object.fromEntries(config.training_rubric.criteria.map(key => [key,null]))})),
     teacher_feedback:'REPLACE with adjudicated teacher feedback, not AI feedback.',student_message:'',subgroup:'unspecified',
     permission_to_use:false,anonymized:false,commercial_use_allowed:false,provenance:'teacher_reviewed'};
   const url = URL.createObjectURL(new Blob([JSON.stringify(review,null,2)],{type:'application/json'}));

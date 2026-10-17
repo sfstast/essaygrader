@@ -1,0 +1,39 @@
+{
+  "schema": "openstax-editorial-annotations-v1",
+  "revision": "a6c95528390e3a2936f5bf87c49ac1a4995a0a6e",
+  "license": "CC-BY-4.0",
+  "purpose": "qualitative commentary auxiliary training; not rubric-grade supervision",
+  "numeric_grades_available": false,
+  "teacher_calibrated": false,
+  "training_performed": false,
+  "quote_containing_pairs_omitted": 66,
+  "author_essay_groups": 10,
+  "splits": {
+    "train": 53,
+    "validation": 23,
+    "test": 22
+  },
+  "sha256": {
+    "train": "51097c6a29c2abf1434eae7ea01f18079c693b275f628b363075999913867a49",
+    "validation": "4d11f889152dc285db76f8022cab71584e45ba99f90c7becd7277d51fa753c59",
+    "test": "3109e6ee8902a0e2608a0b512c0979c2ef9fb1de995e803b76adaa9d7852246e"
+  },
+  "downloaded_student_sample_modules": 11,
+  "source": "https://github.com/openstax/osbooks-writing-guide/tree/a6c95528390e3a2936f5bf87c49ac1a4995a0a6e",
+  "source_manifest_sha256": "395f76f70a37f0bf67a586e6e31e9b6843b9f5c7d7d24ff11b5011808be4ce54",
+  "license_sha256": "38a27c0f017da132e9a04ec8be91ead41cf8a55d85018c2de50c2b831dcfac38",
+  "current_edition_excluded": "CC BY-NC-SA 4.0 since commit 59c6457b8e9a9993b72212e29cfc50e05458e93a",
+  "llm_training_blockers": [
+    "No CUDA GPU",
+    "Training dependencies absent",
+    "Pinned base-model weight license/revision not yet accessible"
+  ],
+  "limits": [
+    "Published college writing examples, not representative of all grades or proficiency levels",
+    "Editorial annotations, not independent numeric teacher grades",
+    "Cannot validate the six 1\u20134 rubric dimensions",
+    "No source-reading factual accuracy validation",
+    "Small auxiliary dataset; not sufficient for a production grader",
+    "Quote-containing pairs omitted conservatively; retain historical license and attribution"
+  ]
+}

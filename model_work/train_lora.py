@@ -83,7 +83,12 @@ def train(args, summary, splits):
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
     # Fail on oversized examples before loading expensive model weights.
-    datasets = {name:[tokenize_example(tokenizer,messages_for(row,True),args.max_length) for row in splits[name]]
+    if summary.get('auxiliary_annotations'):
+        from model_work.openstax_annotations import messages as annotation_messages
+        training_messages = annotation_messages
+    else:
+        training_messages = lambda row: messages_for(row,True)
+    datasets = {name:[tokenize_example(tokenizer,training_messages(row),args.max_length) for row in splits[name]]
                 for name in ('train','validation')}
     options = {'revision':args.revision,'trust_remote_code':False,'torch_dtype':dtype}
     if args.qlora:
@@ -118,6 +123,7 @@ def train(args, summary, splits):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--prepared',required=True)
+    parser.add_argument('--annotations',action='store_true',help='Use published editorial commentary as an auxiliary task, never numeric grade labels.')
     parser.add_argument('--train',action='store_true',help='Explicitly enable downloads and GPU training; otherwise preflight only.')
     parser.add_argument('--model')
     parser.add_argument('--revision')
@@ -129,7 +135,11 @@ def main():
     try:
         if args.max_length < 128 or not 1 <= args.epochs <= 10:
             raise ValueError('Use max-length >=128 and 1–10 epochs.')
-        summary,splits = preflight(args.prepared)
+        if args.annotations:
+            from model_work.openstax_annotations import preflight as annotation_preflight
+            summary,splits = annotation_preflight(args.prepared)
+        else:
+            summary,splits = preflight(args.prepared)
         if args.train:
             train(args,summary,splits)
         else:
