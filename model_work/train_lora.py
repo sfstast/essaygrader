@@ -83,7 +83,9 @@ def train(args, summary, splits):
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
     # Fail on oversized examples before loading expensive model weights.
-    if summary.get('auxiliary_annotations'):
+    if summary.get('native_rating_task'):
+        from model_work.thoughtful_learning import messages as training_messages
+    elif summary.get('auxiliary_annotations'):
         from model_work.openstax_annotations import messages as annotation_messages
         training_messages = annotation_messages
     else:
@@ -124,6 +126,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--prepared',required=True)
     parser.add_argument('--annotations',action='store_true',help='Use published editorial commentary as an auxiliary task, never numeric grade labels.')
+    parser.add_argument('--thoughtful',action='store_true',help='Train native four-level ratings on user-authorized Thoughtful Learning samples.')
     parser.add_argument('--train',action='store_true',help='Explicitly enable downloads and GPU training; otherwise preflight only.')
     parser.add_argument('--model')
     parser.add_argument('--revision')
@@ -135,7 +138,12 @@ def main():
     try:
         if args.max_length < 128 or not 1 <= args.epochs <= 10:
             raise ValueError('Use max-length >=128 and 1–10 epochs.')
-        if args.annotations:
+        if args.annotations and args.thoughtful:
+            raise ValueError('Select only one dataset type.')
+        if args.thoughtful:
+            from model_work.thoughtful_learning import preflight as thoughtful_preflight
+            summary,splits = thoughtful_preflight(args.prepared)
+        elif args.annotations:
             from model_work.openstax_annotations import preflight as annotation_preflight
             summary,splits = annotation_preflight(args.prepared)
         else:

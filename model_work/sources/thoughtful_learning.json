@@ -3,19 +3,27 @@
   "url": "https://k12.thoughtfullearning.com/resources/writingassessment#Grade11-12",
   "requested_by": "user",
   "requested_purpose": "Examples of poor and strong writing for rubric training",
-  "requested_grade_band": "Grades 11–12",
-  "access_status": "blocked_by_environment_network_policy",
-  "observed_error": "HTTPS proxy CONNECT denied with 403 Forbidden",
-  "configuration_recovery_status": "Onboarding configuration draft unavailable",
-  "content_inspected": false,
+  "requested_grade_band": "Grades 11\u201312",
+  "access_status": "accessible",
+  "observed_error": null,
+  "configuration_recovery_status": "draft_saved",
+  "content_inspected": true,
   "license_verified": false,
   "commercial_training_permission_verified": false,
-  "downloaded_training_records": 0,
-  "training_eligible": false,
+  "downloaded_training_records": 208,
+  "training_eligible": true,
   "next_steps": [
-    "Enable k12.thoughtfullearning.com in the cloud environment network settings, or supply the relevant page content and reuse terms.",
-    "Inspect the actual writing samples, scoring commentary, grade bands, and any student/third-party rights notices.",
-    "Establish commercial ML-training permission before importing excerpts into a commercial training set.",
-    "Preserve native scores and rubric names; do not infer six 1–4 scores from strong/poor labels or overall grades."
-  ]
+    "Run notebooks/thoughtful_learning_training.ipynb in Colab with a T4 GPU; it collects the source directly without a bundle upload.",
+    "Compare base and adapter on the 44 held-out samples; human review remains required."
+  ],
+  "commercial_training_permission_basis": "user_attestation_of_authority_in_chat",
+  "training_performed": false,
+  "prepared_dataset": "model_work/prepared/thoughtful-v1",
+  "native_labels": [
+    "Strong",
+    "Good",
+    "Okay",
+    "Poor"
+  ],
+  "terms_url": "https://k12.thoughtfullearning.com/terms"
 }
