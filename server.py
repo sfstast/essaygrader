@@ -69,11 +69,11 @@ def api_key(manual, provider='anthropic'):
     return key
 
 
-def requester(data):
+def requester(data, *, generation=False):
     if data.provider == 'anthropic':
         return request_text
     return lambda key, model, system, message: request_open_text(
-        key, model, system, message, provider=data.provider)
+        key, model, system, message, provider=data.provider, use_base_model=generation)
 
 
 def safely(call):
@@ -123,7 +123,7 @@ def generate(data: Assignment, x_anthropic_key: str | None = Header(default=None
     if not need_source and not need_question:
         raise HTTPException(400, 'Both fields already have content. Clear the field you want to generate.')
     key = api_key(x_model_key or (x_anthropic_key if data.provider == 'anthropic' else None), data.provider)
-    options = {} if data.provider == 'anthropic' else {'request_fn': requester(data)}
+    options = {} if data.provider == 'anthropic' else {'request_fn': requester(data, generation=True)}
     result = safely(lambda: generate_material(key, data.model, data.grade, data.class_level,
                                              data.topic, data.source, data.question, need_source, need_question, **options))
     return {'source': result['source'].strip() if need_source else data.source,

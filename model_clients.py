@@ -25,7 +25,7 @@ def providers():
     ]
 
 
-def request_open_text(key, model, system, message, *, provider, max_tokens=4096):
+def request_open_text(key, model, system, message, *, provider, max_tokens=4096, use_base_model=False):
     if provider == 'nvidia':
         base_url = 'https://integrate.api.nvidia.com/v1'
     elif provider == 'open_model':
@@ -39,12 +39,15 @@ def request_open_text(key, model, system, message, *, provider, max_tokens=4096)
     if (url.scheme != 'https' and not (url.scheme == 'http' and local)) or not url.netloc or url.username or url.password or url.query or url.fragment:
         raise ModelRequestError('The model server URL is not configured correctly.', 400)
     try:
+        payload = {'model': model, 'temperature': 0, 'max_tokens': max_tokens,
+                   'messages': [{'role': 'system', 'content': system},
+                                {'role': 'user', 'content': message}]}
+        if provider == 'open_model' and use_base_model:
+            payload['use_base_model'] = True
         timeout = 300.0 if provider == 'open_model' else 90.0
         with httpx.Client(timeout=timeout, follow_redirects=False) as client:
             response = client.post(base_url + '/chat/completions', headers={'Authorization': 'Bearer ' + key},
-                                   json={'model': model, 'temperature': 0, 'max_tokens': max_tokens,
-                                         'messages': [{'role': 'system', 'content': system},
-                                                      {'role': 'user', 'content': message}]})
+                                   json=payload)
     except httpx.HTTPError:
         raise ModelRequestError('Could not connect to the selected model provider.') from None
     if response.status_code in (401, 403):

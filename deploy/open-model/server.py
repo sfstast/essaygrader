@@ -2,7 +2,7 @@
 import os
 import secrets
 import threading
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -59,6 +59,7 @@ class Completion(BaseModel):
     messages: list[Message] = Field(min_length=1, max_length=20)
     max_tokens: int = Field(default=512, ge=1, le=4096)
     temperature: float = Field(default=0, ge=0, le=2)
+    use_base_model: bool = False
 
 
 @app.get('/health')
@@ -81,7 +82,9 @@ def completion(body: Completion):
             add_generation_prompt=True, return_tensors='pt').to(state['model'].device)
         if tokens.shape[-1] + body.max_tokens > 8192:
             raise HTTPException(400, 'Input is too long; shorten the writing or source.')
-        with torch.inference_mode():
+        model = state['model']
+        adapter_context = model.disable_adapter() if body.use_base_model and hasattr(model, 'disable_adapter') else nullcontext()
+        with torch.inference_mode(), adapter_context:
             output = state['model'].generate(
                 tokens, attention_mask=torch.ones_like(tokens),
                 max_new_tokens=body.max_tokens, do_sample=False,

@@ -3,9 +3,22 @@ import unittest
 from unittest.mock import patch
 
 from model_clients import providers
+from server import Assignment, requester
 
 
 class HostedModelConfigTests(unittest.TestCase):
+    def test_generation_requests_base_model(self):
+        data = Assignment(provider='open_model', model='essaygrader-experimental')
+        with patch('server.request_open_text', return_value='response') as request:
+            requester(data, generation=True)('key', data.model, 'system', 'message')
+        self.assertTrue(request.call_args.kwargs['use_base_model'])
+
+    def test_feedback_keeps_adapter_enabled(self):
+        data = Assignment(provider='open_model', model='essaygrader-experimental')
+        with patch('server.request_open_text', return_value='response') as request:
+            requester(data)('key', data.model, 'system', 'message')
+        self.assertFalse(request.call_args.kwargs['use_base_model'])
+
     def test_server_key_is_advertised_without_disclosing_secret(self):
         secret = 'private-model-server-key'
         with patch.dict(os.environ, {
