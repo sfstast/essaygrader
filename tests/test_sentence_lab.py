@@ -53,3 +53,28 @@ class SentenceLabTests(unittest.TestCase):
         for body in [{'target_id':'made-up','sentence':'A sentence.'},{'target_id':'simple','sentence':'   '}]:
             self.assertEqual(client.post('/api/sentence-lab/review',json=body).status_code,422)
         request.assert_not_called()
+
+    def test_all_patterns_have_local_coaching_and_topics(self):
+        with patch('server.request_text') as request:
+            data=TestClient(app).get('/api/sentence-lab').json()
+        request.assert_not_called()
+        self.assertGreaterEqual(len(data['topics']),6)
+        for lesson in data['lessons']:
+            self.assertEqual(len(lesson['steps']),3)
+            self.assertTrue(all(lesson[key] for key in ('frame','watch_out','starter')))
+
+    @patch('server.request_text',return_value=json.dumps(sentence_fixture()))
+    def test_optional_topic_reaches_review_without_shipping_local_guide(self,request):
+        client=TestClient(app)
+        response=client.post('/api/sentence-lab/review',headers={'X-Model-Key':'fake'},json={
+            'target_id':'participial','sentence':'Exhausted by the climb, Mara rested.',
+            'writing_topic':'A hiking adventure'})
+        self.assertEqual(response.status_code,200)
+        message=json.loads(request.call_args.args[3])
+        self.assertEqual(message['writing_topic'],'A hiking adventure')
+        self.assertNotIn('steps',message['target'])
+        self.assertEqual(request.call_count,1)
+        response=client.post('/api/sentence-lab/review',headers={'X-Model-Key':'fake'},json={
+            'target_id':'participial','sentence':'A sentence.','writing_topic':'x'*301})
+        self.assertEqual(response.status_code,422)
+        self.assertEqual(request.call_count,1)

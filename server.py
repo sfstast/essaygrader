@@ -238,6 +238,7 @@ def sentence_lessons():
 
 
 class SentenceSubmission(Assignment):
+    writing_topic: str = Field(default='', max_length=300)
     target_id: str
     sentence: str = Field(min_length=1, max_length=1000)
 
@@ -265,7 +266,7 @@ def sentence_review(data: SentenceSubmission, request: Request, x_model_key: str
                             output_schema=SentenceAssessment, max_tokens=1200)
 
     result = safely(lambda: assess_sentence(request_sentence, key, task_model(data.model, 'sentence'),
-                                          data.grade, data.target_id, data.sentence, data.learning_goal))
+                                          data.grade, data.target_id, data.sentence, data.learning_goal, data.writing_topic))
     record_activity(request, 'sentence', f"{result['target_label']}: {'target demonstrated' if result['matches_target'] else 'more practice needed'}.")
     return result
 

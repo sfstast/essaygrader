@@ -89,6 +89,10 @@ with TemporaryDirectory() as temp:
             bank=json.load(urlopen(base+'/api/sentence-lab'))['exercises']
             sentence=page.locator('#identify-sentence').inner_text()
             expected=next(row['target_id'] for row in bank if row['sentence']==sentence)
+            page.locator('#identify-hint-button').click()
+            assert page.locator('#identify-hint').is_visible()
+            page.locator('#identify-hint-button').click()
+            assert page.locator('#identify-hint-button').is_disabled()
             page.locator(f'input[name="identify-answer"][value="{expected}"]').check()
             page.locator('#check-identify').click()
             assert '1 correct' in page.locator('#identify-progress').inner_text()
@@ -96,11 +100,24 @@ with TemporaryDirectory() as temp:
             page.locator('#identify-category').select_option('structures')
             assert page.locator('input[name="identify-answer"]').count()==4
             page.locator('#write-mode').click();page.locator('#sentence-target').select_option('participial')
+            assert page.locator('#identify-hint').is_hidden()
+            assert page.locator('#sentence-guide li').count()==3
+            assert 'dangling' in page.locator('#sentence-watch').inner_text()
+            page.locator('#sentence-starter-guide summary').click()
+            assert 'Carrying' in page.locator('#sentence-starter').inner_text()
+            original_topic=page.locator('#sentence-topic').input_value()
+            page.locator('#surprise-topic').click()
+            assert page.locator('#sentence-topic').input_value()!=original_topic
             page.locator('#practice-sentence').fill('Exhausted by the climb, Mara rested.')
+            page.locator('#sentence-topic').select_option('custom')
+            page.locator('#sentence-custom-topic').fill('A hiking adventure <img src=x>')
+            assert page.locator('#sentence-topic-prompt img').count()==0
+            assert page.locator('#practice-sentence').input_value()=='Exhausted by the climb, Mara rested.'
             sentence_calls=[]
             def writing(route):
                 data=route.request.post_data_json;sentence_calls.append(data)
                 assert data['target_id']=='participial'
+                assert data['writing_topic']=='A hiking adventure <img src=x>'
                 assert 'paragraph' not in data and 'answers' not in data
                 route.fulfill(json={**sentence_fixture(),'target_label':'Participial phrase','note':'Practice feedback.'})
             page.route('**/api/sentence-lab/review',writing)
@@ -175,6 +192,13 @@ with TemporaryDirectory() as temp:
             assert page.locator('.mascot-float').evaluate('(node)=>getComputedStyle(node).animationName')=='none'
             page.set_viewport_size({'width':1440,'height':1080})
             page.evaluate('scrollTo({top:0,behavior:"instant"})')
+            page.locator('[data-info-page="contact"]').click()
+            assert page.locator('#info-dialog').is_visible()
+            assert page.locator('#info-body a').get_attribute('href')=='https://github.com/sfstast/essaygrader/issues'
+            page.locator('#info-close').click()
+            page.locator('[data-info-page="privacy"]').click()
+            assert 'Neon' in page.locator('#info-body').inner_text()
+            page.keyboard.press('Escape')
             page.screenshot(path='/tmp/reasoning-studio-interactive-home.png',full_page=True)
             page.set_viewport_size({'width':390,'height':844})
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')

@@ -5,6 +5,7 @@ let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = f
 let tutorHistory = [], tutorSnapshot = '';
 let studyWords = [], vocabResult = null, vocabResultSnapshot = '';
 let sentenceData=null, sentenceLoad=null, sentenceFocus=null, identificationDeck=[], currentIdentification=null, identificationAnswered=false, identificationCorrect=0, identificationTried=0;
+let identificationHintLevel=0;
 let sentenceReview=null, sentenceReviewSnapshot='';
 let accountState={available:false,user:null}, accountMode='signup', authPopup=null, authPopupTimer=null;
 const learningGoal = () => $('learning-goal').value.trim();
@@ -314,6 +315,11 @@ async function loadSentenceLab(fromWelcome=false) {
       const example=document.createElement('p');example.className='small muted';example.textContent=lesson.example;
       $('sentence-reference').append(title,description,example);
     }
+    for(const topic of sentenceData.topics) {
+      const option=document.createElement('option');option.value=topic.id;option.textContent=topic.label;
+      $('sentence-topic').append(option);
+    }
+    $('sentence-topic').value=sentenceData.topics[0]?.id || 'free';updateSentenceTopic();
     renderPatternPickers();syncPatternSelection();
   })();
   try {await sentenceLoad;} catch(error) {sentenceLoad=null;throw error;}
@@ -356,6 +362,7 @@ function shuffled(items) {
 }
 function nextIdentification() {
   if (!sentenceData) return;
+  identificationHintLevel=0;$('identify-hint').hidden=true;$('identify-hint-button').textContent='Give me a hint';$('identify-hint-button').disabled=false;
   const mix=$('identify-category').value;
   const eligible=sentenceData.exercises.filter(row=>sentenceFocus.has(row.target_id) && (mix==='selected' || sentenceData.lessons.find(lesson=>lesson.id===row.target_id).group===mix));
   if(!eligible.length) {
@@ -401,12 +408,18 @@ $('write-mode').addEventListener('click',()=>sentenceMode('write'));
 function updateSentenceTarget() {
   if (!sentenceData) return;
   const lesson=sentenceData.lessons.find(row=>row.id===$('sentence-target').value);
-  if(!lesson){$('sentence-description').textContent='Choose a pattern above to start writing.';$('sentence-example-hint').textContent='';updateSentenceStale();return;}
-  $('sentence-description').textContent=lesson.description;$('sentence-example-hint').textContent='Example: '+lesson.example;updateSentenceStale();
+  if(!lesson){document.querySelector('.sentence-coach').hidden=true;$('sentence-description').textContent='Choose a pattern above to start writing.';$('sentence-example-hint').textContent='';updateSentenceStale();return;}
+  $('sentence-description').textContent=lesson.description;$('sentence-example-hint').textContent='Example: '+lesson.example;
+  $('sentence-coach-title').textContent='Let’s try a '+lesson.label.toLowerCase();
+  $('sentence-frame').textContent=lesson.frame;
+  $('sentence-guide').replaceChildren(...lesson.steps.map(step=>{const li=document.createElement('li');li.textContent=step;return li;}));
+  $('sentence-watch').textContent='Watch for this: '+lesson.watch_out;
+  $('sentence-starter').textContent=lesson.starter;$('sentence-starter-guide').open=false;
+  document.querySelector('.sentence-coach').hidden=false;updateSentenceStale();
 }
-function sentenceSnapshot() {return JSON.stringify({sentence:$('practice-sentence').value.trim(),target_id:$('sentence-target').value,grade:$('grade').value,model:$('model').value,learning_goal:learningGoal()});}
+function sentenceSnapshot() {return JSON.stringify({sentence:$('practice-sentence').value.trim(),target_id:$('sentence-target').value,writing_topic:sentenceWritingTopic(),class_level:$('class_level').value,grade:$('grade').value,model:$('model').value,learning_goal:learningGoal()});}
 function updateSentenceStale() {$('sentence-result-stale').hidden=!sentenceReview || sentenceSnapshot()===sentenceReviewSnapshot;}
-$('sentence-target').addEventListener('change',updateSentenceTarget);$('practice-sentence').addEventListener('input',updateSentenceStale);
+$('sentence-target').addEventListener('change',updateSentenceTarget);$('practice-sentence').addEventListener('input',()=>{updateSentenceStale();const words=$('practice-sentence').value.trim().split(/\s+/u).filter(Boolean).length;$('sentence-live-tip').textContent=words ? `${words} word${words===1?'':'s'} · Read it aloud. Can you point to your chosen pattern?` : 'Start with your idea. You can use the guide whenever you get stuck.';});
 $('review-sentence').addEventListener('click',async()=>{
   if(busy || !sentenceData) return;
   message('sentence-message','');
@@ -416,7 +429,7 @@ $('review-sentence').addEventListener('click',async()=>{
   if(sentenceReview && submitted===sentenceReviewSnapshot) return message('sentence-message','Showing your existing review. Revise the sentence or change the target for another check.','info');
   setBusy(true,'sentence');
   try {
-    const result=await request('sentence-lab/review',{provider:'anthropic',model:$('model').value,grade:$('grade').value,class_level:$('class_level').value,learning_goal:learningGoal(),target_id:$('sentence-target').value,sentence:$('practice-sentence').value.trim()});
+    const result=await request('sentence-lab/review',{provider:'anthropic',model:$('model').value,grade:$('grade').value,class_level:$('class_level').value,learning_goal:learningGoal(),target_id:$('sentence-target').value,sentence:$('practice-sentence').value.trim(),writing_topic:sentenceWritingTopic()});
     if(submitted!==sentenceSnapshot()) return message('sentence-message','Your sentence or settings changed while reviewing. Your edits were kept; check again.','warning');
     sentenceReview=result;sentenceReviewSnapshot=submitted;
     $('sentence-verdict').textContent=`${result.matches_target?'Target demonstrated':'A little more practice'} · ${result.target_label}`;
@@ -426,6 +439,46 @@ $('review-sentence').addEventListener('click',async()=>{
     $('sentence-result').hidden=false;updateSentenceStale();
   } catch(error){message('sentence-message',error.message);} finally{setBusy(false,'sentence');}
 });
+function sentenceWritingTopic() {
+  if($('sentence-topic').value==='custom') return $('sentence-custom-topic').value.trim();
+  return sentenceData?.topics.find(topic=>topic.id===$('sentence-topic').value)?.prompt || '';
+}
+function updateSentenceTopic() {
+  const custom=$('sentence-topic').value==='custom';$('sentence-custom-topic-field').hidden=!custom;
+  $('sentence-topic-prompt').textContent=sentenceWritingTopic() || (custom ? 'Choose something you care about. A memory, an interest, or an imagined scene can all work.' : 'Write about anything you like. Focus on the pattern you chose.');
+  updateSentenceStale();
+}
+$('sentence-topic').addEventListener('change',updateSentenceTopic);
+$('sentence-custom-topic').addEventListener('input',updateSentenceTopic);
+$('surprise-topic').addEventListener('click',()=>{
+  const choices=sentenceData?.topics.filter(topic=>topic.id!==$('sentence-topic').value) || [];
+  if(!choices.length) return;
+  $('sentence-topic').value=choices[Math.floor(Math.random()*choices.length)].id;updateSentenceTopic();
+});
+$('identify-hint-button').addEventListener('click',()=>{
+  if(!currentIdentification) return;
+  const lesson=sentenceData.lessons.find(row=>row.id===currentIdentification.target_id);
+  identificationHintLevel++;
+  const groupHint=lesson.group==='structures' ? 'Find each subject–verb pair. Test which clauses could stand alone and which begin with a dependent word. Count both kinds.' : 'Ask what job the whole highlighted phrase does: naming an activity, describing a noun, renaming a noun, or giving background? Its job matters as much as its first word.';
+  $('identify-hint').textContent=identificationHintLevel===1 ? groupHint : 'A closer clue: '+lesson.watch_out;
+  $('identify-hint').hidden=false;$('identify-hint-button').textContent=identificationHintLevel===1 ? 'Give me a closer clue' : 'Both hints shown';
+  $('identify-hint-button').disabled=identificationHintLevel>=2;
+});
+const infoPages={
+  contact:{title:'Contact us',paragraphs:[['Let’s make the studio better','Have a question, found a bug, or have an idea for practice? Send it through the project’s GitHub issues page. A GitHub account is needed to post.'],['Keep your work private','GitHub issues are public. Describe the problem without including student names, passwords, API keys, or private writing.']],link:['Open the project’s issues page','https://github.com/sfstast/essaygrader/issues']},
+  help:{title:'A little guide to getting started',paragraphs:[['1. Choose your practice','Start with writing, vocabulary, or the sentence lab. Set your grade and a personal goal if you like. You can switch activities without clearing your work.'],['2. Try it in your own words','Paste a source and write an analysis, bring a vocabulary list, or practice a sentence pattern. Sentence quizzes, guides, hints, and topics work without an AI key.'],['3. Get feedback and try again','For AI feedback, add your Anthropic key under Classroom & AI settings. AI requests use that key’s paid usage. Read the feedback, make one revision, and check again. Unchanged reviews are reused in this tab.'],['Optional accounts','An account saves your learning goal, grade, and short practice-result summaries. Save important writing separately before refreshing or closing this tab.']]},
+  privacy:{title:'Privacy & your work',paragraphs:[['What stays in this tab','Drafts, source text, practice answers, and your entered Anthropic key are held in page memory. The app does not save them in browser storage or your account. Refreshing or closing the tab clears that working state.'],['When you request AI feedback','Generating material, grading, or asking for tutoring sends the relevant text through this server to Anthropic. Your key is used to authorize that request. Local sentence hints, guides, and identification checks do not send your answers to an AI provider.'],['What an account stores','The account database stores a username or provider identity, display name, password hash for username accounts, learning goal, grade, and short practice-result summaries. Session cookies keep you signed in; OAuth uses a separate short-lived state cookie.'],['Other services','Render hosts the app, Neon provides the connected account database, and Anthropic processes AI requests under their own policies. Hosting services may keep operational logs. Public links such as GitHub have their own privacy practices.'],['Before you share','Use a username without personal details and keep sensitive information out of practice text. To ask a privacy question, use Contact us without posting private information.']]},
+  about:{title:'A friendly place to grow',paragraphs:[['Practice with purpose','Reasoning Studio helps students build analytical writing, vocabulary, and sentence skills through practice and specific next steps.'],['Your voice comes first','Guides and hints help you make choices. AI feedback supports revision and teacher review; it can make mistakes and is not a final teacher grade.'],['Made for manageable steps','Choose a focus, try it yourself, notice what works, and revise. You can begin as a guest and use the free sentence-identification activities without an API key.']]}
+};
+$('footer-year').textContent=new Date().getFullYear();
+document.querySelectorAll('[data-info-page]').forEach(button=>button.addEventListener('click',()=>{
+  const page=infoPages[button.dataset.infoPage];$('info-title').textContent=page.title;$('info-body').replaceChildren();
+  for(const [title,text] of page.paragraphs) {const h=document.createElement('h3');h.textContent=title;const p=document.createElement('p');p.textContent=text;$('info-body').append(h,p);}
+  if(page.link){const a=document.createElement('a');a.textContent=page.link[0]+' ↗';a.href=page.link[1];a.target='_blank';a.rel='noopener noreferrer';a.className='button secondary';$('info-body').append(a);}
+  $('info-dialog').showModal();$('info-dialog').scrollTop=0;
+}));
+$('info-close').addEventListener('click',()=>$('info-dialog').close());
+
 async function accountRequest(path,data,method='POST') {
   const response=await fetch('/api/account/'+path,{method,headers:{'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});
   const result=await response.json();if(!response.ok) throw new Error(typeof result.detail==='string'?result.detail:'Check your account details and try again.');return result;
