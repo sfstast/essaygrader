@@ -2,6 +2,7 @@ from writing_rubric import RUBRIC_ID, CRITERIA, rubric_text
 """Serve the lightweight website and its Anthropic-backed API."""
 import os
 import json
+import secrets
 from typing import Literal
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, Field, field_validator
 from model_clients import providers
 from claude_models import MODELS, DEFAULT_MODEL, task_model, MODEL_DOCS
@@ -20,6 +22,7 @@ from rubric_assessment import assess, UserRubricAssessment
 from vocabulary import VocabularyAnswer, VocabularyAssessment, grade_vocabulary
 from sentence_lab import BY_ID, lesson_data, SentenceAssessment, assess_sentence
 from accounts import router as account_router, record_activity
+from social_auth import router as social_router
 
 from grading import (CLASS_CALIBRATION, CLASS_LEVELS, CORE_ANALYTICAL_CRITERIA,
                      GRADE_CALIBRATION, GRADE_LEVELS, MODEL, build_system_prompt,
@@ -29,7 +32,14 @@ load_dotenv()
 STATIC = Path(__file__).resolve().parent / 'static'
 app = FastAPI(title='Reasoning Studio', docs_url=None, redoc_url=None)
 app.add_middleware(GZipMiddleware, minimum_size=500)
+# Apple's cross-site form_post callback needs its own Secure SameSite=None state
+# cookie. The main signed-in account cookie remains HttpOnly/SameSite=Lax.
+app.add_middleware(SessionMiddleware,
+    secret_key=os.getenv('OAUTH_SESSION_SECRET') or secrets.token_urlsafe(48),
+    session_cookie='studio_oauth', max_age=600,
+    same_site='none' if os.getenv('RENDER') else 'lax', https_only=bool(os.getenv('RENDER')))
 app.include_router(account_router)
+app.include_router(social_router)
 
 
 @app.exception_handler(SQLAlchemyError)

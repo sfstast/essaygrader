@@ -4,9 +4,9 @@ const fields = ['provider', 'grade', 'class_level', 'model', 'question', 'source
 let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = false;
 let tutorHistory = [], tutorSnapshot = '';
 let studyWords = [], vocabResult = null, vocabResultSnapshot = '';
-let sentenceData=null, sentenceLoad=null, identificationDeck=[], currentIdentification=null, identificationAnswered=false, identificationCorrect=0, identificationTried=0;
+let sentenceData=null, sentenceLoad=null, sentenceFocus=null, identificationDeck=[], currentIdentification=null, identificationAnswered=false, identificationCorrect=0, identificationTried=0;
 let sentenceReview=null, sentenceReviewSnapshot='';
-let accountState={available:false,user:null}, accountMode='signup';
+let accountState={available:false,user:null}, accountMode='signup', authPopup=null, authPopupTimer=null;
 const learningGoal = () => $('learning-goal').value.trim();
 
 const keyName = () => 'Anthropic key';
@@ -20,6 +20,7 @@ function update() {
   $('goal-reminder').textContent = learningGoal() || 'One useful step at a time.';
   updateVocabStale();
   updateSentenceStale();
+  updateWelcomeFocus();
   const text = $('paragraph').value;
   $('word-count').textContent = `${text.trim() ? text.trim().split(/\s+/u).length : 0} words · ${text.length} characters`;
   $('generation-controls').hidden = $('mode').value === 'own';
@@ -43,7 +44,7 @@ function setBusy(value, action) {
   $('tutor-send').disabled = value || !config;
   $('grade-vocab').disabled = value || !config;
   $('build-vocab').disabled = value || !config;
-  $('review-sentence').disabled = value || !config || !sentenceData;
+  $('review-sentence').disabled = value || !config || !sentenceData || !sentenceFocus?.size;
   $('review-sentence').textContent = value && action === 'sentence' ? 'Reading your sentence…' : 'Check my sentence →';
   $('grade-vocab').textContent = value && action === 'vocabulary' ? 'Checking your words…' : 'Check my vocabulary →';
   $('tutor-send').textContent = value && action === 'tutor' ? 'Thinking about your next step…' : 'Ask for a writing hint';
@@ -180,13 +181,44 @@ function route() {
   document.title = home ? 'Reasoning Studio — Find your next step' : activity === 'vocabulary' ? 'Vocabulary practice — Reasoning Studio' : activity === 'sentences' ? 'Sentence lab — Reasoning Studio' : 'Writing workspace — Reasoning Studio';
 }
 window.addEventListener('hashchange',route);
-$('goal-form').addEventListener('submit',event => {
+$('goal-form').addEventListener('submit',async event => {
   event.preventDefault(); if (!config) return;
-  $('grade').value=$('welcome-grade').value;
   const focus = document.querySelector('input[name="focus"]:checked').value;
+  if (focus==='sentences') {
+    try {await loadSentenceLab(true);} catch(error){return message('goal-message',error.message);}
+    if(!sentenceFocus?.size) return message('goal-message','Choose at least one pattern to practice.');
+    if(document.querySelector('input[name="focus"]:checked').value!==focus) return;
+    $('identify-category').value='selected';identificationDeck=[];nextIdentification();
+  }
+  $('grade').value=$('welcome-grade').value;
   if (!learningGoal()) $('learning-goal').value = focus === 'vocabulary' ? 'Use new vocabulary with confidence.' : focus === 'sentences' ? 'Use sentence structures and phrases with confidence.' : focus === 'revision' ? 'Make my draft clearer and stronger.' : 'Support my ideas with clear evidence and reasoning.';
   update(); location.hash = focus === 'vocabulary' ? 'vocabulary' : focus === 'sentences' ? 'sentences' : 'workspace';
 });
+function updateWelcomeFocus() {
+  const focus=document.querySelector('input[name="focus"]:checked').value;
+  const words={writing:['Let’s give your ideas a little lift.','Build a clear claim and make your evidence count.'],vocabulary:['New words? Let’s make them yours.','Your word list becomes a practice set built around you.'],sentences:['Let’s discover what a sentence can do.','Choose your patterns. Spot them, then make them your own.'],revision:['Small edits. A stronger voice.','Keep what’s working and find one good change to make.']};
+  $('mascot-stage').className='mascot-stage focus-'+focus;if($('mascot-says').textContent!==words[focus][0]) $('mascot-says').textContent=words[focus][0];if($('focus-preview').textContent!==words[focus][1]) $('focus-preview').textContent=words[focus][1];
+  $('welcome-pattern-picker').hidden=focus!=='sentences';
+  document.querySelectorAll('[data-focus-shortcut]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.focusShortcut===focus)));
+  const ready=focus!=='sentences' || !!sentenceFocus?.size;
+  $('start-learning').disabled=!config || !ready;
+  const label=focus==='vocabulary'?'Build my word confidence':focus==='sentences'?(sentenceFocus?.size?`Practice ${sentenceFocus.size} pattern${sentenceFocus.size===1?'':'s'}`:'Choose your patterns'):focus==='revision'?'Find my next revision':'Start my writing practice';
+  $('start-learning').textContent=label+' →';
+}
+document.querySelectorAll('input[name="focus"]').forEach(input=>input.addEventListener('change',()=>{
+  updateWelcomeFocus();message('goal-message','');
+  if(input.checked && input.value==='sentences') loadSentenceLab(true).catch(error=>message('goal-message',error.message));
+}));
+document.querySelectorAll('[data-focus-shortcut]').forEach(button=>button.addEventListener('click',()=>{
+  const input=document.querySelector(`input[name="focus"][value="${button.dataset.focusShortcut}"]`);input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));
+}));
+$('mascot-stage').addEventListener('pointermove',event=>{
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const rect=$('mascot-stage').getBoundingClientRect();
+  $('mascot-stage').style.setProperty('--look-x',`${Math.max(-3,Math.min(3,(event.clientX-rect.left-rect.width/2)/rect.width*6))}px`);
+  $('mascot-stage').style.setProperty('--look-y',`${Math.max(-2,Math.min(2,(event.clientY-rect.top-rect.height/2)/rect.height*4))}px`);
+});
+$('mascot-stage').addEventListener('pointerleave',()=>{$('mascot-stage').style.setProperty('--look-x','0px');$('mascot-stage').style.setProperty('--look-y','0px');});
 $('grade').addEventListener('change',()=>{$('welcome-grade').value=$('grade').value;});
 function parseStudyWords(text) {
   const lines=text.split(/\r?\n/).flatMap(line => /[:—–]/u.test(line) ? [line] : line.split(',')).map(line=>line.trim()).filter(Boolean);
@@ -261,14 +293,13 @@ $('grade-vocab').addEventListener('click',async()=>{
   } catch(error) {message('vocab-message',error.message);}
   finally {setBusy(false,'vocabulary');}
 });
-async function loadSentenceLab() {
+async function loadSentenceLab(fromWelcome=false) {
   if (sentenceData) return;
   if (sentenceLoad) return sentenceLoad;
   sentenceLoad=(async()=>{
     const response=await fetch('/api/sentence-lab');if(!response.ok) throw new Error('The sentence lab could not load. Refresh to try again.');
     sentenceData=await response.json();
-    $('sentence-target').replaceChildren(...sentenceData.lessons.map(lesson=>{const option=document.createElement('option');option.value=lesson.id;option.textContent=lesson.label;return option;}));
-    $('sentence-target').value='participial';$('sentence-target').disabled=false;
+    sentenceFocus=new Set(fromWelcome?['participial','complex']:sentenceData.lessons.map(lesson=>lesson.id));
     $('sentence-reference').replaceChildren();
     for (const lesson of sentenceData.lessons) {
       const title=document.createElement('h3');title.textContent=lesson.label;
@@ -276,32 +307,69 @@ async function loadSentenceLab() {
       const example=document.createElement('p');example.className='small muted';example.textContent=lesson.example;
       $('sentence-reference').append(title,description,example);
     }
-    updateSentenceTarget();nextIdentification();$('next-identify').disabled=false;
-    $('review-sentence').disabled=busy || !config;
+    renderPatternPickers();syncPatternSelection();
   })();
   try {await sentenceLoad;} catch(error) {sentenceLoad=null;throw error;}
 }
+function renderPatternPickers() {
+  for (const id of ['welcome-pattern-choices','sentence-pattern-choices']) {
+    const container=$(id);container.replaceChildren();
+    for (const [group,title] of [['structures','Sentence structures'],['phrases','Phrase types']]) {
+      const fieldset=document.createElement('fieldset');fieldset.className='pattern-group';
+      const legend=document.createElement('legend');legend.textContent=title;fieldset.append(legend);
+      for (const lesson of sentenceData.lessons.filter(row=>row.group===group)) {
+        const label=document.createElement('label');label.className='pattern-choice';label.title=lesson.description;
+        const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.patternId=lesson.id;checkbox.checked=sentenceFocus.has(lesson.id);
+        checkbox.addEventListener('change',()=>{if(checkbox.checked)sentenceFocus.add(lesson.id);else sentenceFocus.delete(lesson.id);syncPatternSelection();});
+        const text=document.createElement('span');text.textContent=lesson.label;label.append(checkbox,text);fieldset.append(label);
+      }
+      container.append(fieldset);
+    }
+  }
+}
+function syncPatternSelection() {
+  if(!sentenceData) return;
+  document.querySelectorAll('input[data-pattern-id]').forEach(input=>{input.checked=sentenceFocus.has(input.dataset.patternId);});
+  const count=`${sentenceFocus.size} selected`;$('welcome-pattern-count').textContent=count;$('sentence-pattern-count').textContent=count;
+  const selected=sentenceData.lessons.filter(lesson=>sentenceFocus.has(lesson.id)),previous=$('sentence-target').value;
+  $('sentence-target').replaceChildren(...selected.map(lesson=>{const option=document.createElement('option');option.value=lesson.id;option.textContent=lesson.label;return option;}));
+  if(!selected.length){const option=document.createElement('option');option.value='';option.textContent='Choose a pattern above';$('sentence-target').append(option);}
+  $('sentence-target').value=sentenceFocus.has(previous)?previous:sentenceFocus.has('participial')?'participial':(selected[0]?.id || '');
+  $('sentence-target').disabled=!selected.length;$('review-sentence').disabled=busy || !config || !selected.length;
+  updateSentenceTarget();identificationDeck=[];nextIdentification();updateWelcomeFocus();
+}
+document.querySelectorAll('[data-pattern-preset]').forEach(button=>button.addEventListener('click',()=>{
+  if(!sentenceData) return;
+  const preset=button.dataset.patternPreset;
+  sentenceFocus=new Set(sentenceData.lessons.filter(lesson=>preset==='all' || lesson.group===preset).map(lesson=>lesson.id));
+  syncPatternSelection();
+}));
 function shuffled(items) {
   const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;
 }
 function nextIdentification() {
   if (!sentenceData) return;
-  const group=$('identify-category').value;
-  if (!identificationDeck.length) identificationDeck=shuffled(sentenceData.exercises.filter(row=>sentenceData.lessons.find(lesson=>lesson.id===row.target_id).group===group));
+  const mix=$('identify-category').value;
+  const eligible=sentenceData.exercises.filter(row=>sentenceFocus.has(row.target_id) && (mix==='selected' || sentenceData.lessons.find(lesson=>lesson.id===row.target_id).group===mix));
+  if(!eligible.length) {
+    currentIdentification=null;$('identify-sentence').textContent='Choose at least one matching pattern above to begin.';$('identify-choices').replaceChildren();$('check-identify').disabled=true;$('next-identify').disabled=true;message('identify-feedback','');return;
+  }
+  if (!identificationDeck.length) identificationDeck=shuffled(eligible);
   currentIdentification=identificationDeck.pop();identificationAnswered=false;
+  const group=sentenceData.lessons.find(lesson=>lesson.id===currentIdentification.target_id).group;
   const container=$('identify-sentence');container.replaceChildren();
   const {sentence,highlight}=currentIdentification;
   if (highlight) {
     const index=sentence.indexOf(highlight), mark=document.createElement('mark');mark.textContent=highlight;
     container.append(document.createTextNode(sentence.slice(0,index)),mark,document.createTextNode(sentence.slice(index+highlight.length)));
   } else container.textContent=sentence;
-  $('identify-instruction').textContent=group==='phrases' ? 'Name the highlighted phrase. Instant checking is free and needs no API key.' : 'Classify the whole sentence by its clauses. Instant checking is free and needs no API key.';
+  $('identify-instruction').textContent=group==='phrases' ? 'Name the highlighted phrase. Questions follow your selected patterns; answer choices include other types. Instant checking is free.' : 'Classify the whole sentence by its clauses. Questions follow your selected patterns. Instant checking is free.';
   $('identify-choices').replaceChildren(...shuffled(sentenceData.lessons.filter(lesson=>lesson.group===group)).map(lesson=>{
     const label=document.createElement('label');label.className='identify-choice';
     const input=document.createElement('input');input.type='radio';input.name='identify-answer';input.value=lesson.id;
     const text=document.createElement('span');text.textContent=lesson.label;label.append(input,text);return label;
   }));
-  $('check-identify').disabled=false;message('identify-feedback','');
+  $('check-identify').disabled=false;$('next-identify').disabled=false;message('identify-feedback','');
 }
 $('identify-category').addEventListener('change',()=>{identificationDeck=[];nextIdentification();});
 $('next-identify').addEventListener('click',nextIdentification);
@@ -310,6 +378,7 @@ $('check-identify').addEventListener('click',()=>{
   const selected=document.querySelector('input[name="identify-answer"]:checked');
   if (!selected) return message('identify-feedback','Choose a structure or phrase type first.');
   identificationAnswered=true;identificationTried++;
+  document.querySelectorAll('input[name="identify-answer"]').forEach(input=>{input.disabled=true;});
   const correct=selected.value===currentIdentification.target_id;if(correct) identificationCorrect++;
   const lesson=sentenceData.lessons.find(row=>row.id===currentIdentification.target_id);
   message('identify-feedback',`${correct ? 'You’ve got it.' : 'Keep practicing.'} ${lesson.label}: ${currentIdentification.explanation}`,correct?'success':'warning');
@@ -325,6 +394,7 @@ $('write-mode').addEventListener('click',()=>sentenceMode('write'));
 function updateSentenceTarget() {
   if (!sentenceData) return;
   const lesson=sentenceData.lessons.find(row=>row.id===$('sentence-target').value);
+  if(!lesson){$('sentence-description').textContent='Choose a pattern above to start writing.';$('sentence-example-hint').textContent='';updateSentenceStale();return;}
   $('sentence-description').textContent=lesson.description;$('sentence-example-hint').textContent='Example: '+lesson.example;updateSentenceStale();
 }
 function sentenceSnapshot() {return JSON.stringify({sentence:$('practice-sentence').value.trim(),target_id:$('sentence-target').value,grade:$('grade').value,model:$('model').value,learning_goal:learningGoal()});}
@@ -358,6 +428,9 @@ function updateAccount() {
   $('account-open').textContent=user ? user.display_name : 'Account';
   $('account-guest').hidden=!!user;$('account-member').hidden=!user;
   $('account-submit').disabled=!accountState.available;
+  const providers=accountState.social_providers || [];
+  document.querySelectorAll('[data-social-provider]').forEach(button=>{const provider=providers.find(row=>row.id===button.dataset.socialProvider);button.disabled=!accountState.available || !provider?.ready;button.title=provider?.ready?'Sign in securely with '+provider.label:'Not enabled yet';});
+  $('social-status').textContent=accountState.available && providers.some(row=>row.ready)?'New here? Continuing creates your account. Use the same sign-in method next time.':'Google, Apple and Microsoft sign-in are awaiting account setup.';
   $('account-storage-note').textContent=accountState.available ? 'An optional account saves your learning goal and recent practice results. Your API key and drafts are never saved.' : 'Accounts are prepared, but a persistent database still needs to be connected. All practice tools work as a guest.';
   if(user) $('account-greeting').textContent='Welcome, '+user.display_name+'.';
 }
@@ -385,6 +458,35 @@ function accountModeSelect(mode) {
   message('account-message','');
 }
 $('signup-mode').addEventListener('click',()=>accountModeSelect('signup'));$('login-mode').addEventListener('click',()=>accountModeSelect('login'));
+document.querySelectorAll('[data-social-provider]').forEach(button=>button.addEventListener('click',()=>{
+  const provider=(accountState.social_providers || []).find(row=>row.id===button.dataset.socialProvider);
+  if(!provider?.ready) return;
+  if(authPopup && !authPopup.closed) {authPopup.focus();return;}
+  message('account-message','');
+  authPopup=window.open('/api/account/oauth/'+provider.id+'/start','studio-social-signin','width=520,height=720');
+  if(!authPopup) return message('account-message','Allow a sign-in popup for this site, then try again. Your current work is kept.');
+  message('account-message','Finish signing in in the new window. Your work stays in this tab.','info');
+  clearInterval(authPopupTimer);
+  const began=Date.now();
+  authPopupTimer=setInterval(()=>{
+    if(authPopup?.closed || Date.now()-began>15*60*1000) {clearInterval(authPopupTimer);authPopupTimer=null;loadAccount();}
+  },1500);
+}));
+window.addEventListener('message',async event=>{
+  if(event.origin!==location.origin || event.source!==authPopup || event.data?.type!=='studio-auth') return;
+  clearInterval(authPopupTimer);authPopupTimer=null;authPopup=null;
+  await loadAccount(false);
+  if(event.data.status==='success' && accountState.user) {
+    const user=accountState.user;
+    if(!user.learning_goal) {
+      const grade=$('welcome').hidden?$('grade').value:$('welcome-grade').value;
+      try {await accountRequest('profile',{learning_goal:learningGoal(),grade},'PATCH');user.learning_goal=learningGoal();user.grade=grade;} catch {}
+    } else if(!learningGoal()) {$('learning-goal').value=user.learning_goal;}
+    update();
+  }
+  message('account-message',event.data.status==='success' && accountState.user?'You’re signed in. Your current work is kept.':'Sign-in was cancelled or could not be verified. Please try again.',event.data.status==='success' && accountState.user?'success':'warning');
+});
+window.addEventListener('focus',()=>{if(authPopup && $('account-dialog').open) loadAccount();});
 $('account-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!accountState.available) return;
   $('account-submit').disabled=true;message('account-message','');

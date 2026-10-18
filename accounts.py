@@ -132,6 +132,9 @@ def set_session(request, response, user_id):
     token = secrets.token_urlsafe(40)
     with engine().begin() as connection:
         connection.execute(delete(sessions).where(sessions.c.expires_at <= int(time.time())))
+        previous=request.cookies.get(COOKIE)
+        if previous:
+            connection.execute(delete(sessions).where(sessions.c.token_hash==hashlib.sha256(previous.encode()).hexdigest()))
         connection.execute(insert(sessions).values(token_hash=hashlib.sha256(token.encode()).hexdigest(),
                            user_id=user_id, expires_at=int(time.time())+SESSION_AGE))
     response.set_cookie(COOKIE, token, max_age=SESSION_AGE, httponly=True,
@@ -179,11 +182,12 @@ class Profile(BaseModel):
 
 @router.get('/me')
 def me(request: Request):
+    from social_auth import provider_status
     try:
         user = current_user(request)
-        return {'available':available(), 'user':public_user(user) if user else None}
+        return {'available':available(), 'user':public_user(user) if user else None, 'social_providers':provider_status()}
     except (HTTPException, SQLAlchemyError):
-        return {'available':False, 'user':None}
+        return {'available':False, 'user':None, 'social_providers':provider_status()}
 
 
 @router.post('/signup')
@@ -213,11 +217,6 @@ def login(data: Credentials, request: Request, response: Response):
         if not user:
             password_hash(data.password, '00'*16)
         raise HTTPException(401,'The username or password was not accepted.')
-    # Rotate an existing browser session on login.
-    previous = request.cookies.get(COOKIE)
-    if previous:
-        with engine().begin() as connection:
-            connection.execute(delete(sessions).where(sessions.c.token_hash==hashlib.sha256(previous.encode()).hexdigest()))
     set_session(request,response,user['id'])
     return {'user':public_user(user)}
 

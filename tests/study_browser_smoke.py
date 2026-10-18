@@ -18,7 +18,7 @@ from tests.test_sentence_lab import sentence_fixture
 with TemporaryDirectory() as temp:
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
-    env=dict(os.environ,DATABASE_URL='sqlite:///'+str(Path(temp)/'accounts.db'),RENDER='')
+    env=dict(os.environ,DATABASE_URL='sqlite:///'+str(Path(temp)/'accounts.db'),RENDER='',OAUTH_SESSION_SECRET='browser-test-session-secret-'*3,GOOGLE_CLIENT_ID='fake-google-client',GOOGLE_CLIENT_SECRET='fake-google-secret')
     server=subprocess.Popen([sys.executable,'-m','uvicorn','server:app','--host','127.0.0.1','--port',str(port)],cwd=root,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     base=f'http://127.0.0.1:{port}'
     try:
@@ -119,9 +119,62 @@ with TemporaryDirectory() as temp:
             page.locator('#sentence-tools').wait_for(state='visible')
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             page.screenshot(path='/tmp/reasoning-studio-sentence-mobile.png',full_page=True)
+            # Topic selection on the welcome page drives questions and writing targets.
+            page.locator('a[aria-label="Reasoning Studio home"]').click()
+            page.locator('[data-focus-shortcut="sentences"]').click()
+            assert page.locator('#welcome-pattern-picker').is_visible()
+            page.locator('#welcome-pattern-picker [data-pattern-preset="clear"]').click()
+            assert page.locator('#start-learning').is_disabled()
+            page.locator('#welcome-pattern-choices input[data-pattern-id="participial"]').check()
+            page.locator('#welcome-pattern-choices input[data-pattern-id="appositive"]').check()
+            assert '2 patterns' in page.locator('#start-learning').inner_text()
+            page.locator('#start-learning').click();page.locator('#sentence-tools').wait_for(state='visible')
+            page.locator('#identify-mode').click()
+            assert set(page.locator('#sentence-target option').evaluate_all('(nodes)=>nodes.map(node=>node.value)'))=={'participial','appositive'}
+            for _ in range(6):
+                sentence=page.locator('#identify-sentence').inner_text()
+                expected=next(row['target_id'] for row in bank if row['sentence']==sentence)
+                assert expected in {'participial','appositive'}
+                page.locator('#next-identify').click()
+            page.locator('#sentence-tools [data-pattern-preset="clear"]').click()
+            assert page.locator('#review-sentence').is_disabled()
+            page.locator('#sentence-pattern-choices input[data-pattern-id="gerund"]').check()
+            assert page.locator('#sentence-target').input_value()=='gerund'
+            assert page.locator('#practice-sentence').input_value()=='Carrying a map, Mara followed the path.'
+            # A simulated provider popup exercises real account cookies and preserves the tab.
+            page.locator('#writing-tab').click()
+            page.locator('#writing-tools').wait_for(state='visible')
+            page.locator('#source').fill('Keep my source text.')
+            page.locator('#paragraph').fill('Keep my working draft.')
+            page.locator('#api-key').fill('do-not-save-test-key')
+            page.locator('#account-open').click()
+            page.wait_for_function("!document.querySelector('[data-social-provider=google]').disabled")
+            assert page.locator('[data-social-provider="apple"]').is_disabled()
+            popup_html = """<!doctype html><script>(async()=>{
+              const response=await fetch('/api/account/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'social_browser',password:'Only-a-browser-fixture-123',display_name:'Social browser'})});
+              window.opener.postMessage({type:'studio-auth',status:response.ok?'success':'error'},location.origin);window.close();
+            })();</script>"""
+            page.context.route('**/api/account/oauth/google/start',lambda route:route.fulfill(content_type='text/html',body=popup_html))
+            with page.expect_popup():
+                page.locator('[data-social-provider="google"]').click()
+            page.locator('#account-member').wait_for(state='visible')
+            page.wait_for_function("document.getElementById('account-message').textContent.includes('You’re signed in')")
+            assert page.locator('#source').input_value()=='Keep my source text.'
+            assert page.locator('#paragraph').input_value()=='Keep my working draft.'
+            assert page.locator('#api-key').input_value()=='do-not-save-test-key'
+            page.locator('#account-close').click()
+            page.locator('a[aria-label="Reasoning Studio home"]').click()
+            page.emulate_media(reduced_motion='reduce')
+            assert page.locator('.mascot-float').evaluate('(node)=>getComputedStyle(node).animationName')=='none'
+            page.set_viewport_size({'width':1440,'height':1080})
+            page.evaluate('scrollTo({top:0,behavior:"instant"})')
+            page.screenshot(path='/tmp/reasoning-studio-interactive-home.png',full_page=True)
+            page.set_viewport_size({'width':390,'height':844})
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            page.screenshot(path='/tmp/reasoning-studio-interactive-home-mobile.png',full_page=True)
             assert page.evaluate('localStorage.length')==0 and page.evaluate('sessionStorage.length')==0
             assert not errors,errors
             browser.close()
-        print('PASS study browser: welcome goals, account signup/logout/profile, vocabulary grading/reuse, free identification, sentence review/reuse, safe rendering, state preservation, mobile layout')
+        print('PASS study browser: welcome goals, account signup/logout/profile, vocabulary grading/reuse, free identification, sentence review/reuse, pattern filters, mocked social popup, safe rendering, state preservation, mobile layout')
     finally:
         server.terminate();server.wait(timeout=10)

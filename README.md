@@ -150,3 +150,19 @@ For explicit local account testing only, use `DATABASE_URL=sqlite:////tmp/studio
 PostgreSQL sessions are limited to a small connection pool suitable for free
 managed databases. Account storage is separate from the model API; no API key is
 needed to sign up or identify sentence types.
+
+## Social sign-in and chosen practice patterns
+
+Google, Apple and Microsoft sign-in buttons are available in the Account panel.
+They remain clearly disabled until the persistent database and provider credentials
+are configured. See [social sign-in setup](SOCIAL_SIGNIN.md) for exact callback
+URLs and secret names. Registration and sign-in use the same provider button;
+accounts are not automatically linked by matching emails.
+
+The welcome page now has an original lightweight SVG book mascot, local activity
+shortcuts and goal-specific prompts. Its subtle motion respects reduced-motion
+preferences. Selecting sentence practice reveals specific pattern checkboxes;
+the same selection is editable in the sentence lab. Only chosen patterns appear
+as writing targets and quiz questions, while identification answer choices retain
+other pattern types as distractors. Choosing patterns or interacting with the
+mascot makes no model calls. Existing work stays in the tab when switching modes.
