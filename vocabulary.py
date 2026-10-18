@@ -63,11 +63,12 @@ def grade_vocabulary(request_fn, key, model, grade, answers, learning_goal=''):
         raise ValueError('The vocabulary review did not match your study words. Your answers are kept.')
     ordered = [by_word[word] for word in expected]
     rows = [{**row.model_dump(), 'word': answer.word.strip(),
-             'points': row.meaning_score + row.usage_score} for row, answer in zip(ordered, answers)]
+             'points': row.meaning_score + row.usage_score,
+             'score_out_of_10':(row.meaning_score + row.usage_score)/4*10} for row, answer in zip(ordered, answers)]
     earned = sum(row['points'] for row in rows)
     possible = 4 * len(answers)
     return {'results': rows, 'earned': earned, 'possible': possible,
-            'percentage': round(100 * earned / possible),
+            'percentage': round(100 * earned / possible), 'score_out_of_10':round(10*earned/possible,1),
             'review_words': [row['word'] for row in rows if row['points'] < 4],
             'model': model, 'usage': getattr(raw, 'usage', {}),
             'grading_note': 'Practice feedback: meaning 0–2 + use in context 0–2 per word. Review AI judgments with your teacher.'}

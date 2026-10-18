@@ -27,6 +27,9 @@ class VocabularyTests(unittest.TestCase):
         self.assertEqual(request.call_count,1)
         self.assertEqual((result['earned'],result['possible'],result['percentage']),(7,8,88))
         self.assertEqual(result['review_words'],['resilient'])
+        self.assertEqual(result['score_out_of_10'],8.8)
+        self.assertEqual(result['results'][0]['score_out_of_10'],7.5)
+        self.assertEqual(result['results'][1]['score_out_of_10'],10.0)
         self.assertIn('learning_goal',request.call_args.args[3])
 
     def test_missing_duplicate_or_extra_results_are_rejected(self):

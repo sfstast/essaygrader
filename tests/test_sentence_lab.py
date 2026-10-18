@@ -8,6 +8,7 @@ from sentence_lab import BY_ID, EXERCISES, assess_sentence
 
 def sentence_fixture():
     return {'target_id':'participial','matches_target':True,
+            'pattern_score':4,'completeness_score':2,'clarity_score':2,'conventions_score':2,
             'explanation':'The opening participial phrase describes Mara without a dangling modifier.',
             'parts':[{'text':'Exhausted by the climb','role':'Participial phrase describing Mara'}],
             'next_step':'Try placing a participial phrase after the noun it modifies.',
@@ -91,3 +92,15 @@ class SentenceLabTests(unittest.TestCase):
                         self.assertNotIn(prompt,prompts)
                         prompts.add(prompt)
         self.assertEqual(len(prompts),1296)
+
+    def test_sentence_grade_sums_independent_dimensions_and_rejects_conflicts(self):
+        fixture=sentence_fixture();fixture.update(clarity_score=1,conventions_score=0)
+        result=assess_sentence(lambda *args:json.dumps(fixture),'key','model','Grade 8','participial','Exhausted by the climb, Mara rested.')
+        self.assertEqual(result['score_out_of_10'],7)
+        self.assertTrue(result['matches_target'])
+        for bad in [True,2.5,5,-1]:
+            fixture=sentence_fixture();fixture['pattern_score']=bad
+            with self.assertRaises(ValueError):assess_sentence(lambda *args:json.dumps(fixture),'key','model','Grade 8','participial','Exhausted by the climb, Mara rested.')
+        fixture=sentence_fixture();fixture['pattern_score']=2
+        with self.assertRaisesRegex(ValueError,'disagreed'):
+            assess_sentence(lambda *args:json.dumps(fixture),'key','model','Grade 8','participial','Exhausted by the climb, Mara rested.')

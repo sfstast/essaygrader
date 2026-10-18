@@ -22,6 +22,8 @@ class RubricAssessmentTests(unittest.TestCase):
         self.assertIn('social comparison', system)
         self.assertIn('not independently calibrated teacher scores', system)
         self.assertNotIn('score', result)
+        self.assertEqual(result['score_out_of_10'],7.5)
+        self.assertIn('18/24 rubric points',result['feedback'])
         self.assertEqual(set(result['criterion_scores']), set(CRITERIA))
         self.assertIn('Analysis: 3/4', result['feedback'])
         self.assertFalse(result['teacher_calibrated'])
@@ -93,3 +95,11 @@ class RubricAssessmentTests(unittest.TestCase):
         self.assertEqual(recorded[0]['output_config']['format']['type'], 'json_schema')
         self.assertEqual(result.usage['cache_read_input_tokens'], 800)
         self.assertEqual(result.usage['output_tokens'], 500)
+
+    def test_practice_conversion_preserves_original_category_scores(self):
+        for rating,expected in [(1,2.5),(2,5.0),(4,10.0)]:
+            fixture=rubric_fixture()
+            for key in CRITERIA:fixture[key]['score']=rating
+            result=assess(lambda *args:json.dumps(fixture),'key','model','Grade 8','On-level / regular','My source','My paragraph')
+            self.assertEqual(result['score_out_of_10'],expected)
+            self.assertTrue(all(score==rating for score in result['criterion_scores'].values()))

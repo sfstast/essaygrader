@@ -27,3 +27,9 @@ credentials.json
 *_credentials.json
 service-account*.json
 .ipynb_checkpoints/
+
+# Private publisher/student-work references stay out of the public repo
+reference_materials/private/
+reference_materials/amplify_pages.json
+model_work/sources/amplify*.json
+*.pdf

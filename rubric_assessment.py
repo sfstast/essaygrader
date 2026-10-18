@@ -85,10 +85,12 @@ def parse_assessment(raw, source, paragraph):
 
 
 def render_assessment(result, grade, class_level):
-    lines = ['## Your rubric: six category ratings', f'{grade} · {class_level}', result.summary]
+    total=sum(getattr(result,key).score for key in CRITERIA)
+    score=round(total/24*10,1)
+    lines = ['## Practice grade: '+f'{score:g}/10', f'{total}/24 rubric points, scaled to 10. All six categories count equally; this is a practice conversion, not an official teacher grade.', '## Your rubric: six category ratings', f'{grade} · {class_level}', result.summary]
     for key, (label, _) in CRITERIA.items():
         criterion = getattr(result, key)
-        lines += [f'**{label}: {criterion.score}/4 · {LEVELS[criterion.score]}**', criterion.explanation]
+        lines += [f'**{label}: {criterion.score}/4 · {criterion.score/4*10:g}/10 · {LEVELS[criterion.score]}**', criterion.explanation]
     lines.append('## Evidence and reasoning checks')
     for check in result.evidence_checks:
         lines += [f'**{check.verdict.capitalize()}**', f'Student: “{check.paragraph_quote}”',
@@ -100,7 +102,7 @@ def render_assessment(result, grade, class_level):
     lines += ['## A question to think through', result.next_question]
     if result.limitations:
         lines += ['## Limits of this assessment'] + ['- ' + s for s in result.limitations]
-    lines.append('Model-assisted rubric ratings; teacher review is recommended. Quotation presence is checked automatically, but interpretation and rating accuracy have not been independently calibrated. No combined grade is calculated because the supplied rubric specifies no weights or conversion.')
+    lines.append('Model-assisted rubric ratings; teacher review is recommended. Quotation presence is checked automatically, but interpretation and rating accuracy have not been independently calibrated. The /10 score scales the equally weighted rubric total; the original category ratings remain the basis for revision.')
     return '\n\n'.join(lines)
 
 
@@ -116,6 +118,7 @@ def assess(request_fn, key, model, grade, class_level, source, paragraph, questi
     return {'feedback': render_assessment(result, grade, class_level),
             'assessment': result.model_dump(), 'rubric_id': RUBRIC_ID,
             'criterion_scores': {k: getattr(result, k).score for k in CRITERIA},
+            'score_out_of_10':round(sum(getattr(result,k).score for k in CRITERIA)/24*10,1),
             'quotation_presence_verified': bool(result.evidence_checks),
             'teacher_calibrated': False, 'references': reference_status(), 'model': model,
             'usage': getattr(raw, 'usage', {})}

@@ -1,10 +1,11 @@
 """Reference guidance for prompts; these files do not update model weights."""
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-AMPLIFY = ROOT / 'reference_materials' / 'amplify_pages.json'
+AMPLIFY = ROOT / 'reference_materials' / 'private' / 'amplify_pages.json'
 
 
 @lru_cache(maxsize=1)
@@ -13,10 +14,27 @@ def style_preferences():
 
 
 def amplify_bundle():
-    if not AMPLIFY.exists():
+    # Production references live in Render secrets, outside the public repository.
+    raw = os.getenv('AMPLIFY_REFERENCE_JSON', '').strip()
+    try:
+        if not raw:
+            if not AMPLIFY.exists():
+                return None
+            raw = AMPLIFY.read_text()
+        bundle = json.loads(raw)
+        if not isinstance(bundle,dict) or bundle.get('extraction_reviewed') is not True:
+            return None
+        pages=bundle.get('pages')
+        if not isinstance(pages,list) or not pages:
+            return None
+        if any(not isinstance(page,dict) or type(page.get('page')) is not int or page['page']<1
+               or not isinstance(page.get('text'),str) for page in pages):
+            return None
+        if not any(page['text'].strip() for page in pages):
+            return None
+        return bundle
+    except (OSError,ValueError):
         return None
-    bundle = json.loads(AMPLIFY.read_text())
-    return bundle if bundle.get('extraction_reviewed') is True else None
 
 
 def reference_status():

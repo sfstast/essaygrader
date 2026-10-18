@@ -15,7 +15,8 @@ def import_pdf(path):
     pages = [{'page': i + 1, 'text': page.extract_text() or ''} for i, page in enumerate(reader.pages)]
     if not pages or not any(p['text'].strip() for p in pages):
         raise ValueError('No extractable PDF text; OCR and manual review are required.')
-    output = Path(__file__).with_name('amplify_pages.json')
+    output = Path(__file__).parent / 'private' / 'amplify_pages.json'
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps({
         'source': 'Amplify Student Work Collection: Essay Scoring',
         'url': 'https://my.amplify.com/resources/wp-content/uploads/Student_Work_Collection__Essay_Scoring.pdf',

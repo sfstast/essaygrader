@@ -127,7 +127,7 @@ def config():
             'model_reference': MODEL_DOCS, 'references': reference_status(),
             'training_rubric':{'id':RUBRIC_ID,'text':rubric_text(),'criteria':list(CRITERIA)},
             'assessment_rubric':{'name':RUBRIC_ID, 'criteria':list(CRITERIA),
-                                 'scale': '1–4 per category; no combined grade', 'teacher_calibrated':False},
+                                 'scale': '1–4 per category; equal-weight total scaled to /10', 'teacher_calibrated':False},
             'grade_criteria': GRADE_CALIBRATION, 'class_criteria': CLASS_CALIBRATION,
             'core_criteria': CORE_ANALYTICAL_CRITERIA}
 
@@ -160,7 +160,7 @@ def feedback(data: Assignment, request: Request, x_anthropic_key: str | None = H
     result = safely(lambda: assess(rubric_request,key,task_model(data.model, 'grade'),data.grade,data.class_level,
                                  data.source,data.paragraph,data.question,
                                  data.extra + ('\nLearning goal: ' + data.learning_goal if data.learning_goal else '')))
-    record_activity(request, 'writing', 'Writing rubric: ' + ', '.join(f'{name} {score}/4' for name,score in result['criterion_scores'].items()))
+    record_activity(request, 'writing', f"Writing practice {result['score_out_of_10']:g}/10. Rubric: " + ', '.join(f'{name} {score}/4' for name,score in result['criterion_scores'].items()))
     return result
 
 
@@ -228,7 +228,7 @@ def vocabulary_grade(data: VocabularySubmission, request: Request, x_model_key: 
     result = safely(lambda: grade_vocabulary(
         request_vocabulary, key, task_model(data.model, 'vocabulary'),
         data.grade, data.answers, data.learning_goal))
-    record_activity(request, 'vocabulary', f"Vocabulary practice: {result['earned']}/{result['possible']} points ({result['percentage']}%).")
+    record_activity(request, 'vocabulary', f"Vocabulary practice: {result['earned']}/{result['possible']} points ({result['percentage']}%) · {result['score_out_of_10']:g}/10.")
     return result
 
 
@@ -267,7 +267,7 @@ def sentence_review(data: SentenceSubmission, request: Request, x_model_key: str
 
     result = safely(lambda: assess_sentence(request_sentence, key, task_model(data.model, 'sentence'),
                                           data.grade, data.target_id, data.sentence, data.learning_goal, data.writing_topic))
-    record_activity(request, 'sentence', f"{result['target_label']}: {'target demonstrated' if result['matches_target'] else 'more practice needed'}.")
+    record_activity(request, 'sentence', f"{result['target_label']}: {result['score_out_of_10']:g}/10 · {'target demonstrated' if result['matches_target'] else 'more practice needed'}.")
     return result
 
 

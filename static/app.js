@@ -271,12 +271,12 @@ $('build-vocab').addEventListener('click',()=>{
   } catch(error) {message('vocab-setup-message',error.message);}
 });
 function renderVocabulary(result) {
-  $('vocab-score').textContent=`${result.earned} / ${result.possible} points · ${result.percentage}%`;
+  $('vocab-score').textContent=`${(10*result.earned/result.possible).toFixed(1)} / 10 · ${result.earned} / ${result.possible} points · ${result.percentage}%`;
   $('vocab-review').textContent=result.review_words.length ? `A little more practice: ${result.review_words.join(', ')}.` : 'You demonstrated every word. Try a new context to make them stick.';
   const container=$('vocab-result-cards');container.replaceChildren();
   for (const row of result.results) {
     const card=document.createElement('article');card.className='vocab-result-card';
-    const title=document.createElement('h3');title.textContent=`${row.word} · ${row.points}/4`;card.append(title);
+    const title=document.createElement('h3');title.textContent=`${row.word} · ${(row.points/4*10).toFixed(1)}/10 · ${row.points}/4 points`;card.append(title);
     for (const text of [`Meaning: ${row.meaning_score}/2 · Use in context: ${row.usage_score}/2`,row.feedback,`Meaning to remember: ${row.suggested_definition}`,`In context: ${row.example_sentence}`]) {
       const paragraph=document.createElement('p');paragraph.textContent=text;card.append(paragraph);
     }
@@ -397,7 +397,7 @@ $('check-identify').addEventListener('click',()=>{
   const correct=selected.value===currentIdentification.target_id;if(correct) identificationCorrect++;
   const lesson=sentenceData.lessons.find(row=>row.id===currentIdentification.target_id);
   message('identify-feedback',`${correct ? 'You’ve got it.' : 'Keep practicing.'} ${lesson.label}: ${currentIdentification.explanation}`,correct?'success':'warning');
-  $('identify-progress').textContent=`${identificationCorrect} correct · ${identificationTried} tried`;
+  $('identify-progress').textContent=`${identificationCorrect} correct · ${identificationTried} tried · Grade: ${(10*identificationCorrect/identificationTried).toFixed(1)}/10`;
   $('check-identify').disabled=true;
 });
 function sentenceMode(mode) {
@@ -433,6 +433,8 @@ $('review-sentence').addEventListener('click',async()=>{
     const result=await request('sentence-lab/review',{provider:'anthropic',model:$('model').value,grade:$('grade').value,class_level:$('class_level').value,learning_goal:learningGoal(),target_id:$('sentence-target').value,sentence:$('practice-sentence').value.trim(),writing_topic:sentenceWritingTopic()});
     if(submitted!==sentenceSnapshot()) return message('sentence-message','Your sentence or settings changed while reviewing. Your edits were kept; check again.','warning');
     sentenceReview=result;sentenceReviewSnapshot=submitted;
+    $('sentence-score').textContent=`${result.pattern_score+result.completeness_score+result.clarity_score+result.conventions_score} / 10`;
+    $('sentence-score-breakdown').textContent=`Pattern ${result.pattern_score}/4 · Completeness ${result.completeness_score}/2 · Clarity ${result.clarity_score}/2 · Conventions ${result.conventions_score}/2`;
     $('sentence-verdict').textContent=`${result.matches_target?'Target demonstrated':'A little more practice'} · ${result.target_label}`;
     $('sentence-explanation').textContent=result.explanation;
     $('sentence-parts').replaceChildren(...result.parts.map(part=>{const item=document.createElement('li');item.textContent=`“${part.text}” — ${part.role}`;return item;}));

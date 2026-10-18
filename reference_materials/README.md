@@ -14,7 +14,12 @@ python reference_materials/import_amplify.py /path/to/Student_Work_Collection__E
 ```
 
 The importer requires `pypdf` locally. Review extracted pages against the PDF,
-set `extraction_reviewed` to true, and deploy the resulting `amplify_pages.json`.
+set `extraction_reviewed` to true, and save the reviewed JSON as Render’s secret `AMPLIFY_REFERENCE_JSON`. The importer writes to ignored `reference_materials/private/amplify_pages.json`; do not commit the PDF or its extracted student work. Render reads the secret directly, and the public config exposes only whether references are loaded.
 Original scores and commentary remain in page-linked text; do not convert them
 to scores under the user's different rubric. Only reviewed references are used.
 Bounded page excerpts guide scoring qualitatively, not as independent validation.
+
+
+A malformed or unreviewed bundle is not used. Until a real reviewed bundle is
+provided, the app reports Amplify as not loaded. Merely preparing this importer
+does not incorporate publisher content or retrain Claude.

@@ -76,6 +76,7 @@ with TemporaryDirectory() as temp:
             page.route('**/api/vocabulary/grade',vocabulary)
             page.locator('#grade-vocab').click();page.locator('#vocab-results').wait_for(state='visible')
             assert '7 / 8 points' in page.locator('#vocab-score').inner_text()
+            assert '8.8 / 10' in page.locator('#vocab-score').inner_text()
             assert page.evaluate('window.vocabUnsafe') is None
             page.locator('#grade-vocab').click()
             assert 'existing review' in page.locator('#vocab-message').inner_text();assert len(vocab_calls)==1
@@ -96,6 +97,7 @@ with TemporaryDirectory() as temp:
             page.locator(f'input[name="identify-answer"][value="{expected}"]').check()
             page.locator('#check-identify').click()
             assert '1 correct' in page.locator('#identify-progress').inner_text()
+            assert '10.0/10' in page.locator('#identify-progress').inner_text()
             assert page.locator('#check-identify').is_disabled()
             page.locator('#identify-category').select_option('structures')
             assert page.locator('input[name="identify-answer"]').count()==4
@@ -131,6 +133,8 @@ with TemporaryDirectory() as temp:
             page.route('**/api/sentence-lab/review',writing)
             page.locator('#review-sentence').click();page.locator('#sentence-result').wait_for(state='visible')
             assert 'Target demonstrated' in page.locator('#sentence-verdict').inner_text()
+            assert '10 / 10' in page.locator('#sentence-score').inner_text()
+            assert 'Clarity 2/2' in page.locator('#sentence-score-breakdown').inner_text()
             page.locator('#review-sentence').click();assert len(sentence_calls)==1
             page.locator('#practice-sentence').fill('Carrying a map, Mara followed the path.')
             assert page.locator('#sentence-result-stale').is_visible()

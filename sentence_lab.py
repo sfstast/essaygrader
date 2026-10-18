@@ -1,6 +1,6 @@
 """Original, locally scored identification exercises plus Claude writing feedback."""
 import json
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 from reasoning_assessment import normalized
 
 LESSONS = [
@@ -97,6 +97,10 @@ class SentenceAssessment(BaseModel):
     model_config = ConfigDict(extra='forbid')
     target_id: str = Field(min_length=1, max_length=40)
     matches_target: StrictBool
+    pattern_score: StrictInt = Field(ge=0, le=4)
+    completeness_score: StrictInt = Field(ge=0, le=2)
+    clarity_score: StrictInt = Field(ge=0, le=2)
+    conventions_score: StrictInt = Field(ge=0, le=2)
     explanation: str = Field(min_length=8, max_length=600)
     parts: list[SentencePart] = Field(max_length=4)
     next_step: str = Field(min_length=8, max_length=300)
@@ -107,6 +111,15 @@ def assess_sentence(request_fn, key, model, grade, target_id, sentence, learning
     target = BY_ID[target_id]
     system = (
         'Coach one sentence for the requested sentence structure or phrase type. '
+        'Score four dimensions independently: pattern_score 0–4 (4 correct target use, '
+        '3 recognizable target with a minor issue, 2 partial construction, 1 an attempt, '
+        '0 target absent); completeness_score 0–2 (2 complete sentence, 1 incomplete or '
+        'faulty clause structure, 0 no usable sentence); clarity_score 0–2 (2 clear meaning, '
+        '1 meaning needs rereading, 0 meaning cannot be understood); conventions_score '
+        '0–2 (2 correct punctuation/spelling, 1 minor errors, 0 errors that impede reading). '
+        'matches_target is true exactly when pattern_score is 4. Do not let a correct '
+        'pattern conceal separate clarity or punctuation problems. '
+
         'Use the enforced schema and assess the actual student sentence. For sentence structures, '
         'count independent and dependent clauses, not merely verbs or conjunctions. '
         'For phrase types, determine grammatical FUNCTION as well as form: an -ing form acting '
@@ -130,7 +143,9 @@ def assess_sentence(request_fn, key, model, grade, target_id, sentence, learning
         raise ValueError('Claude did not return a complete sentence review. Your sentence is kept.') from None
     if result.target_id != target_id or any(normalized(p.text) not in normalized(sentence) for p in result.parts):
         raise ValueError('The review did not match your sentence and target. Your sentence is kept.')
+    if result.matches_target != (result.pattern_score==4):
+        raise ValueError('The sentence rating and pattern check disagreed. Your sentence is kept.')
     if result.matches_target and not result.parts:
         raise ValueError('The review did not identify a checkable part of your sentence. Your sentence is kept.')
-    return {**result.model_dump(), 'target_label':target['label'], 'model':model,
+    return {**result.model_dump(), 'score_out_of_10':sum((result.pattern_score,result.completeness_score,result.clarity_score,result.conventions_score)), 'target_label':target['label'], 'model':model,
             'usage':getattr(raw,'usage',{}), 'note':'Practice feedback, not a final teacher grade.'}
