@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationError
 from model_clients import providers
 from claude_models import MODELS, DEFAULT_MODEL, task_model, MODEL_DOCS
 from grading_guidance import reference_guidance, reference_status
@@ -110,6 +110,8 @@ def safely(call):
         raise HTTPException(502, 'Could not connect to Anthropic. Please try again.') from None
     except APIStatusError:
         raise HTTPException(502, 'Anthropic could not complete the request. Check your model and account access.') from None
+    except ValidationError:
+        raise HTTPException(502, 'Claude returned an incomplete review. Your work is kept; please try again.') from None
     except ValueError as exc:
         raise HTTPException(502, str(exc)) from None
     except Exception:
@@ -263,7 +265,7 @@ def sentence_review(data: SentenceSubmission, request: Request, x_model_key: str
 
     def request_sentence(key, model, system, message):
         return request_text(key, model, system, message,
-                            output_schema=SentenceAssessment, max_tokens=1200)
+                            output_schema=SentenceAssessment, max_tokens=2048)
 
     result = safely(lambda: assess_sentence(request_sentence, key, task_model(data.model, 'sentence'),
                                           data.grade, data.target_id, data.sentence, data.learning_goal, data.writing_topic))

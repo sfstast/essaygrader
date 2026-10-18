@@ -1,6 +1,7 @@
 """Shared grading and assignment-generation logic, independent of the UI."""
 import json
 from anthropic import Anthropic
+from pydantic import ValidationError
 
 MODEL = 'claude-haiku-4-5'
 
@@ -166,11 +167,16 @@ def request_text(api_key: str, model: str, system: str, message: str, *, output_
         options['output_config'] = {'effort': effort}
     with Anthropic(api_key=api_key, timeout=90.0, max_retries=1) as client:
         if output_schema is not None:
-            response = client.messages.parse(**options, output_format=output_schema)
+            try:
+                response = client.messages.parse(**options, output_format=output_schema)
+            except ValidationError:
+                # The SDK validates before we can inspect stop_reason. Never expose
+                # partial JSON or a student's text in a validation traceback.
+                raise ValueError('Claude returned an incomplete review. Your work is kept; please try again.') from None
         else:
             response = client.messages.create(**options)
     if response.stop_reason == 'max_tokens':
-        raise ValueError('The response was cut short. Try a shorter passage or paragraph.')
+        raise ValueError('Claude’s response was cut short. Your work is kept; please try again.')
     if output_schema is not None:
         if response.parsed_output is None:
             raise ValueError('Claude did not return the requested rubric structure. Your writing is kept.')

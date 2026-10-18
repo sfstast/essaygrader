@@ -591,7 +591,7 @@ async function initialize() {
     $('welcome-grade').value=$('grade').value; $('welcome-grade').disabled=false;
     $('start-learning').disabled=false;
     $('user-rubric').textContent = config.training_rubric.text;
-    $('reference-status').textContent = config.references.amplify_loaded ? 'Your rubric, style comparisons, and Amplify reference excerpts are loaded.' : 'Your rubric and style comparisons are loaded. Amplify references are not loaded yet.';
+    $('reference-status').textContent = config.references.amplify_loaded ? `Your rubric, style comparisons, and ${config.references.amplify_examples || 'reviewed'} Amplify reference examples are loaded. Original publisher scores remain separate.` : 'Your rubric and style comparisons are loaded. Amplify references are not loaded yet.';
     $('model').value = config.model; $('core-criteria').textContent = config.core_criteria; setBusy(false,'feedback'); update(); loadAccount(true);
   } catch {message('feedback-message','The classroom settings could not load. Refresh the page to retry.');}
 }

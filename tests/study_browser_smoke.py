@@ -123,14 +123,22 @@ with TemporaryDirectory() as temp:
             assert page.locator('#new-sentence-prompt').is_disabled()
             assert page.locator('#sentence-topic-prompt img').count()==0
             assert page.locator('#practice-sentence').input_value()=='Exhausted by the climb, Mara rested.'
-            sentence_calls=[]
+            sentence_calls=[];sentence_failure=[True]
             def writing(route):
+                if sentence_failure[0]:
+                    sentence_failure[0]=False
+                    route.fulfill(status=502,json={'detail':'Claude returned an incomplete review. Your work is kept; please try again.'})
+                    return
                 data=route.request.post_data_json;sentence_calls.append(data)
                 assert data['target_id']=='participial'
                 assert data['writing_topic']=='A hiking adventure <img src=x>'
                 assert 'paragraph' not in data and 'answers' not in data
                 route.fulfill(json={**sentence_fixture(),'target_label':'Participial phrase','note':'Practice feedback.'})
             page.route('**/api/sentence-lab/review',writing)
+            page.locator('#review-sentence').click()
+            page.wait_for_function("document.getElementById('sentence-message').textContent.includes('incomplete review')")
+            assert page.locator('#practice-sentence').input_value()=='Exhausted by the climb, Mara rested.'
+            assert page.locator('#sentence-result').is_hidden()
             page.locator('#review-sentence').click();page.locator('#sentence-result').wait_for(state='visible')
             assert 'Target demonstrated' in page.locator('#sentence-verdict').inner_text()
             assert '10 / 10' in page.locator('#sentence-score').inner_text()

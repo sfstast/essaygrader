@@ -120,6 +120,8 @@ def assess_sentence(request_fn, key, model, grade, target_id, sentence, learning
         'matches_target is true exactly when pattern_score is 4. Do not let a correct '
         'pattern conceal separate clarity or punctuation problems. '
 
+        'Keep the whole review under 140 words. Use at most two short quoted parts, '
+        'a one- or two-sentence explanation, one short next step, and one example sentence. '
         'Use the enforced schema and assess the actual student sentence. For sentence structures, '
         'count independent and dependent clauses, not merely verbs or conjunctions. '
         'For phrase types, determine grammatical FUNCTION as well as form: an -ing form acting '
