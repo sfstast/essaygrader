@@ -20,9 +20,11 @@ async def lifespan(app):
     import torch
     torch.set_num_threads(int(os.environ.get('MODEL_CPU_THREADS', '2')))
     from transformers import AutoModelForCausalLM, AutoTokenizer
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, revision=MODEL_REVISION)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID, revision=MODEL_REVISION, torch_dtype=torch.float32,
+        MODEL_ID, revision=MODEL_REVISION,
+        torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
         low_cpu_mem_usage=True)
     adapter = os.environ.get('ADAPTER_PATH')
     if os.environ.get('ADAPTER_REPO'):
@@ -32,7 +34,7 @@ async def lifespan(app):
     if adapter:
         from peft import PeftModel
         model = PeftModel.from_pretrained(model, adapter)
-    model.eval()
+    model.to(device).eval()
     state.update(model=model, tokenizer=tokenizer)
     yield
     state.clear()
@@ -76,7 +78,7 @@ def completion(body: Completion):
         tokenizer = state['tokenizer']
         tokens = tokenizer.apply_chat_template(
             [m.model_dump() for m in body.messages], tokenize=True,
-            add_generation_prompt=True, return_tensors='pt')
+            add_generation_prompt=True, return_tensors='pt').to(state['model'].device)
         if tokens.shape[-1] + body.max_tokens > 8192:
             raise HTTPException(400, 'Input is too long; shorten the writing or source.')
         with torch.inference_mode():
