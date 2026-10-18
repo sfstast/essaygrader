@@ -106,11 +106,19 @@ with TemporaryDirectory() as temp:
             page.locator('#sentence-starter-guide summary').click()
             assert 'Carrying' in page.locator('#sentence-starter').inner_text()
             original_topic=page.locator('#sentence-topic').input_value()
+            seen_prompts={page.locator('#sentence-topic-prompt').inner_text()}
+            for _ in range(15):
+                page.locator('#new-sentence-prompt').click()
+                prompt=page.locator('#sentence-topic-prompt').inner_text()
+                assert prompt not in seen_prompts
+                seen_prompts.add(prompt)
+                assert page.locator('#sentence-topic').input_value()==original_topic
             page.locator('#surprise-topic').click()
             assert page.locator('#sentence-topic').input_value()!=original_topic
             page.locator('#practice-sentence').fill('Exhausted by the climb, Mara rested.')
             page.locator('#sentence-topic').select_option('custom')
             page.locator('#sentence-custom-topic').fill('A hiking adventure <img src=x>')
+            assert page.locator('#new-sentence-prompt').is_disabled()
             assert page.locator('#sentence-topic-prompt img').count()==0
             assert page.locator('#practice-sentence').input_value()=='Exhausted by the climb, Mara rested.'
             sentence_calls=[]

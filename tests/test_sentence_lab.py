@@ -78,3 +78,16 @@ class SentenceLabTests(unittest.TestCase):
             'target_id':'participial','sentence':'A sentence.','writing_topic':'x'*301})
         self.assertEqual(response.status_code,422)
         self.assertEqual(request.call_count,1)
+
+    def test_generated_prompt_combinations_are_unique_and_fit_topic_limit(self):
+        from sentence_lab import lesson_data
+        data=lesson_data();prompts=set()
+        for topic in data['topics']:
+            for scene in topic['scenes']:
+                for twist in data['prompt_twists']:
+                    for angle in data['prompt_angles']:
+                        prompt=f'Write one sentence about {scene} when {twist}. Include {angle}.'
+                        self.assertLessEqual(len(prompt),300)
+                        self.assertNotIn(prompt,prompts)
+                        prompts.add(prompt)
+        self.assertEqual(len(prompts),1296)

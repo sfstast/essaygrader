@@ -5,6 +5,7 @@ let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = f
 let tutorHistory = [], tutorSnapshot = '';
 let studyWords = [], vocabResult = null, vocabResultSnapshot = '';
 let sentenceData=null, sentenceLoad=null, sentenceFocus=null, identificationDeck=[], currentIdentification=null, identificationAnswered=false, identificationCorrect=0, identificationTried=0;
+let currentWritingPrompt='', promptDecks=new Map();
 let identificationHintLevel=0;
 let sentenceReview=null, sentenceReviewSnapshot='';
 let accountState={available:false,user:null}, accountMode='signup', authPopup=null, authPopupTimer=null;
@@ -319,7 +320,7 @@ async function loadSentenceLab(fromWelcome=false) {
       const option=document.createElement('option');option.value=topic.id;option.textContent=topic.label;
       $('sentence-topic').append(option);
     }
-    $('sentence-topic').value=sentenceData.topics[0]?.id || 'free';updateSentenceTopic();
+    $('sentence-topic').value=sentenceData.topics[Math.floor(Math.random()*sentenceData.topics.length)]?.id || 'free';newSentencePrompt();
     renderPatternPickers();syncPatternSelection();
   })();
   try {await sentenceLoad;} catch(error) {sentenceLoad=null;throw error;}
@@ -441,19 +442,37 @@ $('review-sentence').addEventListener('click',async()=>{
 });
 function sentenceWritingTopic() {
   if($('sentence-topic').value==='custom') return $('sentence-custom-topic').value.trim();
-  return sentenceData?.topics.find(topic=>topic.id===$('sentence-topic').value)?.prompt || '';
+  return $('sentence-topic').value==='free' ? '' : currentWritingPrompt;
 }
 function updateSentenceTopic() {
   const custom=$('sentence-topic').value==='custom';$('sentence-custom-topic-field').hidden=!custom;
+  $('new-sentence-prompt').disabled=custom || $('sentence-topic').value==='free' || !sentenceData;
   $('sentence-topic-prompt').textContent=sentenceWritingTopic() || (custom ? 'Choose something you care about. A memory, an interest, or an imagined scene can all work.' : 'Write about anything you like. Focus on the pattern you chose.');
   updateSentenceStale();
 }
-$('sentence-topic').addEventListener('change',updateSentenceTopic);
+function newSentencePrompt() {
+  const topic=sentenceData?.topics.find(topic=>topic.id===$('sentence-topic').value);
+  if(!topic) return updateSentenceTopic();
+  let deck=promptDecks.get(topic.id);
+  if(!deck?.length) {
+    const combinations=[];
+    for(const scene of topic.scenes) for(const twist of sentenceData.prompt_twists) for(const angle of sentenceData.prompt_angles) {
+      combinations.push(`Write one sentence about ${scene} when ${twist}. Include ${angle}.`);
+    }
+    deck=shuffled(combinations);
+    // Avoid an immediate repeat when a theme's deck is replenished.
+    if(deck.at(-1)===currentWritingPrompt && deck.length>1) [deck[0],deck[deck.length-1]]=[deck.at(-1),deck[0]];
+    promptDecks.set(topic.id,deck);
+  }
+  currentWritingPrompt=deck.pop();updateSentenceTopic();
+}
+$('sentence-topic').addEventListener('change',newSentencePrompt);
 $('sentence-custom-topic').addEventListener('input',updateSentenceTopic);
+$('new-sentence-prompt').addEventListener('click',newSentencePrompt);
 $('surprise-topic').addEventListener('click',()=>{
   const choices=sentenceData?.topics.filter(topic=>topic.id!==$('sentence-topic').value) || [];
   if(!choices.length) return;
-  $('sentence-topic').value=choices[Math.floor(Math.random()*choices.length)].id;updateSentenceTopic();
+  $('sentence-topic').value=choices[Math.floor(Math.random()*choices.length)].id;newSentencePrompt();
 });
 $('identify-hint-button').addEventListener('click',()=>{
   if(!currentIdentification) return;

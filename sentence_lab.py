@@ -40,6 +40,20 @@ TOPICS = [
     {'id':'invention', 'label':'An invention', 'prompt':'Describe someone testing an invention for the first time.'},
     {'id':'everyday', 'label':'An everyday surprise', 'prompt':'Describe an ordinary day interrupted by something surprising.'},
 ]
+TOPIC_SCENES = {
+    'adventure': ['a traveler finding a hidden path', 'two friends exploring an unfamiliar town', 'a team crossing a narrow bridge', 'a hiker following a mysterious sound', 'a visitor discovering a secret room', 'a sailor spotting an unknown island'],
+    'school': ['a student preparing for a performance', 'a group building a science project', 'a class planning a school garden', 'a new student joining a club', 'a team practicing for a competition', 'a student discovering a surprising book'],
+    'nature': ['a fox exploring a snowy forest', 'a bird building a nest near a busy path', 'a turtle finding its way to water', 'a squirrel hiding food before a storm', 'a butterfly emerging in a quiet garden', 'a young deer approaching a stream'],
+    'friendship': ['two friends solving a small mystery', 'a friend helping someone learn a skill', 'a group welcoming a new neighbor', 'two friends planning a surprise', 'a teammate encouraging someone after a mistake', 'two friends repairing something together'],
+    'invention': ['a student testing a homemade robot', 'an inventor designing a helpful tool', 'a team building a solar-powered machine', 'a young engineer fixing a bicycle', 'a designer improving an everyday object', 'a group trying an unusual experiment'],
+    'everyday': ['a baker opening a shop before sunrise', 'a family preparing an unexpected meal', 'a musician practicing beside an open window', 'a neighbor finding a lost object', 'a cyclist stopping at a quiet park', 'a gardener discovering something unusual'],
+}
+PROMPT_TWISTS = ['something important goes missing', 'the weather suddenly changes', 'a small discovery changes the plan', 'an unexpected sound draws attention', 'a familiar place looks different', 'a difficult choice must be made']
+PROMPT_ANGLES = ['a sign of nervousness', 'a moment of determination', 'a feeling of relief', 'a surprising detail', 'a change in the surroundings', 'a small act of care']
+for topic in TOPICS:
+    topic['scenes'] = TOPIC_SCENES[topic['id']]
+
+
 
 BY_ID = {lesson['id']: lesson for lesson in LESSONS}
 
@@ -69,7 +83,7 @@ EXERCISES = [
 
 
 def lesson_data():
-    return {'lessons': LESSONS, 'topics':TOPICS, 'exercises': [dict(zip(
+    return {'lessons': LESSONS, 'topics':TOPICS, 'prompt_twists':PROMPT_TWISTS, 'prompt_angles':PROMPT_ANGLES, 'exercises': [dict(zip(
         ('id','target_id','sentence','highlight','explanation'), row)) for row in EXERCISES]}
 
 
