@@ -149,18 +149,36 @@ Be specific. Quote brief phrases from the source and the paragraph. Do not inven
         parts.append("Additional instructions from the user:\n" + extra)
     return "\n\n".join(parts)
 
-def request_text(api_key: str, model: str, system: str, message: str) -> str:
-    with Anthropic(api_key=api_key, timeout=60.0, max_retries=1) as client:
-        response = client.messages.create(
-            model=model, max_tokens=4096, system=system,
-            messages=[{'role': 'user', 'content': message}],
-        )
+class ModelText(str):
+    """Plain text plus non-sensitive usage counters from the provider."""
+    def __new__(cls, text, usage):
+        value = super().__new__(cls, text)
+        value.usage = {name: count for name in (
+            'input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens')
+            if isinstance((count := getattr(usage, name, None)), int)}
+        return value
+
+
+def request_text(api_key: str, model: str, system: str, message: str, *, output_schema=None, max_tokens=2048, effort='low') -> str:
+    options = {'model': model, 'max_tokens': max_tokens,
+               'system': [{'type': 'text', 'text': system, 'cache_control': {'type': 'ephemeral'}}], 'messages': [{'role': 'user', 'content': message}]}
+    if '-5-5' in model:
+        options['output_config'] = {'effort': effort}
+    with Anthropic(api_key=api_key, timeout=90.0, max_retries=1) as client:
+        if output_schema is not None:
+            response = client.messages.parse(**options, output_format=output_schema)
+        else:
+            response = client.messages.create(**options)
     if response.stop_reason == 'max_tokens':
         raise ValueError('The response was cut short. Try a shorter passage or paragraph.')
+    if output_schema is not None:
+        if response.parsed_output is None:
+            raise ValueError('Claude did not return the requested rubric structure. Your writing is kept.')
+        return ModelText(response.parsed_output.model_dump_json(), getattr(response, 'usage', None))
     text = '\n\n'.join(block.text for block in response.content if block.type == 'text').strip()
     if not text:
         raise ValueError('No text was returned. Please try again.')
-    return text
+    return ModelText(text, getattr(response, 'usage', None))
 
 def build_user_message(grade: str, class_level: str, source_text: str, paragraph: str, question: str = '') -> str:
     return (

@@ -3,9 +3,9 @@ const $ = id => document.getElementById(id);
 const fields = ['provider', 'grade', 'class_level', 'model', 'question', 'source', 'paragraph', 'extra', 'topic', 'mode'];
 let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = false;
 let tutorHistory = [], tutorSnapshot = '';
-const providerDetails = () => config?.providers?.find(p => p.id === $('provider').value);
-const keyName = () => providerDetails()?.key_label || 'Anthropic key';
-const hasKey = () => $('api-key').value.trim() || providerDetails()?.server_key_configured;
+
+const keyName = () => 'Anthropic key';
+const hasKey = () => $('api-key').value.trim();
 const payload = () => Object.fromEntries(fields.map(id => [id, $(id).value]));
 const snapshot = () => JSON.stringify(Object.fromEntries(fields.filter(id => !['topic', 'mode'].includes(id)).map(id => [id, $(id).value])));
 function message(id, text, kind = 'error') {
@@ -17,7 +17,7 @@ function update() {
   $('generation-controls').hidden = $('mode').value === 'own';
   $('generated-note').hidden = !generatedSource || generatedSource !== $('source').value;
   $('stale-note').hidden = !feedback || snapshot() === feedbackSnapshot;
-  $('key-status').textContent = providerDetails()?.server_key_configured ? 'Model access is configured by the site owner. No key needed.' : $('api-key').value.trim() ? 'Key entered · only held in this tab.' : 'Only held in this tab. Never saved to browser storage.';
+  $('key-status').textContent = $('api-key').value.trim() ? 'Key entered · only held in this tab.' : 'Only held in this tab. Never saved to browser storage.';
   if (tutorHistory.length && snapshot() !== tutorSnapshot) {
     tutorHistory = []; $('tutor-conversation').replaceChildren();
     message('tutor-message', 'Assignment or settings changed. Your next question starts a new tutoring conversation.', 'warning');
@@ -40,7 +40,7 @@ function setBusy(value, action) {
 }
 async function request(path, data) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), data.provider === 'open_model' ? 330000 : 130000);
+  const timeout = setTimeout(() => controller.abort(), 240000);
   try {
     const response = await fetch(`/api/${path}`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Model-Key': $('api-key').value.trim()}, body: JSON.stringify(data), signal: controller.signal});
     const result = await response.json();
@@ -94,24 +94,19 @@ $('grade-button').addEventListener('click', async () => {
   const data = payload(), submittedSnapshot = snapshot();
   if (!hasKey()) return message('feedback-message', `Enter your ${keyName()} in the classroom panel.`);
   if (!data.source.trim() || !data.paragraph.trim()) return message('feedback-message', 'Add both source text and an analytical paragraph.');
+  if (feedback && submittedSnapshot === feedbackSnapshot) {
+    message('feedback-message', 'Showing your existing feedback. Revise your writing or settings to request a new review.', 'info');
+    $('feedback-panel').scrollIntoView({behavior:'smooth',block:'start'}); return;
+  }
   setBusy(true, 'feedback');
   try {
     const result = await request('feedback', data); feedback = result.feedback; feedbackSnapshot = submittedSnapshot;
+    const usage = result.usage || {};
+    $('usage-note').hidden = !Number.isInteger(usage.output_tokens);
+    $('usage-note').textContent = `${result.model || 'Claude'} · ${usage.input_tokens || 0} new input tokens · ${usage.cache_read_input_tokens || 0} cached input tokens · ${usage.cache_creation_input_tokens || 0} cache-write tokens · ${usage.output_tokens || 0} output tokens`;
     renderFeedback(feedback); update(); $('feedback-panel').scrollIntoView({behavior: 'smooth', block: 'start'});
   } catch (error) { message('feedback-message', error.message); }
   finally {setBusy(false, 'feedback');}
-});
-$('provider').addEventListener('change', () => {
-  const selected = providerDetails(); if (!selected) return;
-  // Never reuse a credential with another provider.
-  $('api-key').value = ''; $('api-key').type = 'password';
-  $('toggle-key').textContent = 'Show'; $('toggle-key').setAttribute('aria-label', 'Show API key'); $('toggle-key').setAttribute('aria-pressed','false');
-  $('key-label').textContent = selected.key_label; $('model').value = selected.model;
-  $('api-key').placeholder = selected.id === 'anthropic' ? 'sk-ant-…' : 'Enter provider key';
-  $('provider-note').textContent = selected.id === 'open_model' && !selected.configured ?
-    'The site owner must configure an open-model server before this option can send requests.' :
-    'Uses this provider for generation, grading, and tutoring. Changing provider clears the entered key.';
-  update();
 });
 $('tutor-send').addEventListener('click', async () => {
   if (busy) return;
@@ -122,11 +117,11 @@ $('tutor-send').addEventListener('click', async () => {
   if (!question) return message('tutor-message','Ask a writing question first.');
   setBusy(true,'tutor');
   try {
-    const result = await request('tutor',{...data,student_message:question,history:tutorHistory.slice(-6)});
+    const result = await request('tutor',{...data,student_message:question,history:tutorHistory.slice(-4).map(turn => ({...turn, content:turn.content.slice(0,1800)}))});
     if (submitted !== snapshot()) {message('tutor-message','Your assignment changed while the tutor was responding. Ask again for a hint about your updated writing.','warning'); return;}
     tutorSnapshot = submitted;
     tutorHistory.push({role:'user',content:question},{role:'assistant',content:result.reply});
-    tutorHistory = tutorHistory.slice(-6);
+    tutorHistory = tutorHistory.slice(-4).map(turn => ({...turn, content:turn.content.slice(0,1800)}));
     const log = $('tutor-conversation'); log.replaceChildren();
     for (const turn of tutorHistory) {
       const box = document.createElement('div'); box.className = 'tutor-turn ' + turn.role;
@@ -166,7 +161,10 @@ async function initialize() {
       $(id).replaceChildren(...options.map(value => {const option = document.createElement('option'); option.value = value; option.textContent = value; return option;}));
       $(id).value = selected; $(id).disabled = false;
     }
-    $('provider').replaceChildren(...config.providers.map(provider => {const option = document.createElement('option'); option.value = provider.id; option.textContent = provider.label; return option;}));
+    $('model').replaceChildren(...config.models.map(model => {const option = document.createElement('option'); option.value = model.id; option.textContent = model.label; return option;}));
+    $('model').disabled = false;
+    $('user-rubric').textContent = config.training_rubric.text;
+    $('reference-status').textContent = config.references.amplify_loaded ? 'Your rubric, style comparisons, and Amplify reference excerpts are loaded.' : 'Your rubric and style comparisons are loaded. Amplify references are not loaded yet.';
     $('model').value = config.model; $('core-criteria').textContent = config.core_criteria; setBusy(false,'feedback'); update();
   } catch {message('feedback-message','The classroom settings could not load. Refresh the page to retry.');}
 }

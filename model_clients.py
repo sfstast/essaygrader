@@ -15,14 +15,8 @@ class ModelRequestError(Exception):
 
 
 def providers():
-    return [
-        {'id': 'anthropic', 'label': 'Claude', 'model': 'claude-haiku-4-5', 'key_label': 'Anthropic key'},
-        {'id': 'nvidia', 'label': 'NVIDIA Nemotron (hosted)', 'model': NVIDIA_MODEL, 'key_label': 'NVIDIA API key'},
-        {'id': 'open_model', 'label': 'Open model / fine-tuned adapter',
-         'model': os.getenv('OPEN_MODEL_NAME', SMALL_MODEL), 'key_label': 'Model server key',
-         'server_key_configured': bool(os.getenv('OPEN_MODEL_API_KEY')),
-         'configured': bool(os.getenv('OPEN_MODEL_BASE_URL'))},
-    ]
+    # Legacy research clients below are retained only for archived offline comparisons.
+    return [{'id': 'anthropic', 'label': 'Claude', 'model': 'auto', 'key_label': 'Anthropic key'}]
 
 
 def request_open_text(key, model, system, message, *, provider, max_tokens=4096, use_base_model=False):

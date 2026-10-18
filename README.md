@@ -1,52 +1,94 @@
 # Reasoning Studio
 
-A lightweight HTML/CSS/JavaScript writing workspace served by FastAPI. Typing, word counts, settings and feedback rendering happen in the browser; only assignment generation and grading make AI requests. No frontend build or JavaScript dependencies are required.
+A lightweight writing workspace served by FastAPI, using bring-your-own-key
+Claude for assignment generation, rubric ratings and tutoring. The website no
+longer offers Nemotron or an open-model/LoRA provider. Historical model research
+and notebooks are retained as archives, not active website providers.
 
-## Run
+## Run and deploy
 
-Use Python 3.12 or newer from the repository directory:
+Use Python 3.12 or newer:
 
-```sh
+```
 python -m pip install -r requirements.txt
 python -m uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-Open port 8000 through your host's preview or port forwarding. For local development, open `http://localhost:8000`. Choose a model provider and enter its key in the settings panel. The key stays in the current tab's memory and is sent to the backend over the deployment's HTTPS connection. It is never stored in browser storage or included in feedback downloads. Refreshing clears the current work and manual key. The API does not persist submissions or keys.
+[Deploy on Render](https://render.com/deploy?repo=https://github.com/sfstast/essaygrader)
+using `render.yaml`. The existing service uses `pip install -r requirements.txt`,
+`uvicorn server:app --host 0.0.0.0 --port $PORT`, and `/api/health`.
+Only outbound Anthropic access is required; no Colab or model server is needed.
+The user enters an Anthropic API key. It stays in the tab's memory, is sent over
+HTTPS for AI requests, and is not saved in browser storage or feedback exports.
+The backend does not persist submissions or keys. Refreshing clears the work.
+An optional server-side `ANTHROPIC_API_KEY` is supported for private deployments;
+restrict access before enabling shared paid API usage on a public site.
 
-Select grade and class, supply or generate assignment material, then submit a paragraph. Only empty fields are generated. Feedback persists while editing and is marked stale when its inputs change.
+## Claude models and consumption
 
-## Deploy
+The efficient default routes grading to **Sonnet 5.5** and practice/tutoring to
+**Haiku 5.5**. Users can choose Haiku for all tasks, Sonnet for all tasks, optional
+Opus 5.5 for deeper review, or the former Haiku 4.5 for compatibility. These are
+recommendations from Anthropic's published lineup, not a measured essay-grading
+ranking. Account access and live model behavior still need verification with a
+real Anthropic key. All API usage is billed to that key.
 
-[Deploy the HTML version on Render](https://render.com/deploy?repo=https://github.com/sfstast/essaygrader) using the included `render.yaml` blueprint. Review the hosting plan in Render before creating the service. No saved API key is required.
+The stable rubric prompt uses an explicit five-minute prompt-cache breakpoint.
+Cache hits depend on repeated identical prefixes within Anthropic's cache rules;
+initial cache writes carry overhead, so savings are not guaranteed on isolated
+requests. Structured outputs enforce the response shape without duplicating its
+JSON schema in the prompt. The grading API makes one model request and does not
+silently repair semantic failures with another paid call. Feedback is concise,
+with at most two evidence checks and two revision steps. Output budgets are
+2,048 tokens for generation, 4,096 for rubric assessment (including any thinking),
+and 768 for tutoring. Effort is low for generation/tutoring and medium for grading.
+Budgets are ceilings, not predicted usage. Actual grading token counts, including
+cache reads/writes, are returned and displayed when available.
 
-The HTML version needs a Python web host (for example Render or Railway); Streamlit Community Cloud runs the earlier `app.py` interface instead. Configure:
+Repeated clicks reuse the current feedback until writing or settings change.
+Tutor context is limited to four turns with 1,800 characters per turn. Source
+text is not silently truncated. Generation preserves existing fields and retries
+at most once if a passage is below its grade-appropriate minimum length.
 
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn server:app --host 0.0.0.0 --port $PORT`
-- Health check: `/api/health`
-- Python: 3.12 or newer
+Official sources checked on 2026-10-18:
 
-Use HTTPS and allow outbound requests to `api.anthropic.com` for Claude or `integrate.api.nvidia.com` for hosted NVIDIA models. No saved API key is required: each user enters their own. `app.py` is retained for existing Streamlit deployments.
+- [Models and IDs](https://platform.claude.com/docs/en/models/overview)
+- [Haiku](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
+- [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
+- [Effort](https://platform.claude.com/docs/en/build-with-claude/effort)
+- [Structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+- [Token counting](https://platform.claude.com/docs/en/build-with-claude/token-counting)
 
-## Tests
+## Rubric and reference materials
 
-```sh
+The live grader uses the uploaded rubric transcribed in `writing_rubric.py`:
+thesis, evidence, organization, analysis, control of language and
+mechanics/conventions. Each category uses 1 Beginning through 4 Exemplary.
+The user did not supply weights or an overall conversion, so the site does not
+invent a percentage, 1–10 score, or total. Explanations are scope- and grade-aware.
+Quotation-presence checks reject invented source/student quotations. Semantic
+checks reject evidence credit without a source link and summary-only writing
+scored as developed analysis. These checks do not establish teacher calibration.
+
+Both user-supplied style comparisons guide the prompt. Their percentages are
+preferences, not six-category teacher labels. Strong prose cannot substitute for
+evidence or reasoning, and narrative imagery is not mandatory in analysis.
+
+**Amplify is not loaded:** the original PDF/extractions are missing here and the
+publisher download returns HTTP 403. The page-linked import path is prepared;
+see [reference material instructions](reference_materials/README.md). Native
+publisher scores will remain separate from the user's rubric. Prompt guidance
+is not Claude fine-tuning, and no independently validated custom grader is claimed.
+
+## Checks
+
+```
 python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
 python -m playwright install chromium
 python tests/browser_smoke.py
 ```
 
-API and browser tests use mocked Anthropic responses, never a real key or paid requests. Browser tests start their own isolated local server. Live model access must be checked separately with your key.
-
-## Open models, teacher-data collection and tutoring
-
-The HTML app supports Claude, hosted NVIDIA Nemotron, and a server-configured OpenAI-compatible model (including a separately served fine-tuned adapter). Pick the provider in **Your classroom**, enter its key, and select a model available to your account. Switching providers clears the key. A separate writing-tutor panel offers hints and follow-up questions; its effectiveness still needs independent teacher evaluation.
-
-See [the model development guide](model_work/README.md) for teacher-review templates, protected train/validation/test splits, reproducible comparisons, and an opt-in Qwen LoRA/QLoRA recipe. A real CPU argument-convincingness experiment has now been completed on a CC-BY-4.0 human-annotated corpus. Its 71.8% holdout accuracy was below the 73.9% longer-argument baseline, so the candidate was rejected for analytical grading. No large language model or teacher-calibrated analytical grader has been trained or validated. See [the commercial-use audit and results](model_work/COMMERCIAL_USE.md). Synthetic fixtures remain software checks, not teacher labels.
-
-## Source-grounded analytical assessment
-
-Feedback now uses six original, grade-calibrated criteria: claim, task response, evidence, source accuracy, warrants, and line of reasoning. The model must supply actual source/student excerpts; quotation-presence checks reject absent wording before issuing a grade. The application computes the weighted overall score, with limits for summary-only writing, missing evidence, major source misreading and unsupported central inferences. It does not score vocabulary or grammar as a proxy for analysis. Quotation checks do not independently validate semantics; model judgments still need teacher calibration.
-
-Commercial use is required for the training path. Noncommercial ELLIPSE/PERSUADE data is excluded, and the exploratory ELLIPSE downloads were removed without training. The public argument-quality corpus has separate human preferences, not teacher essay grades. [Commercially licensed examples, scope, attribution obligations and the completed experiment](model_work/COMMERCIAL_USE.md) are documented separately.
+Checks mock API responses; they verify software, schema, textual grounding,
+provider removal and interface behavior, not real grading accuracy. `app.py` is
+an archived Streamlit interface. The deployed product is `server.py` and `static/`.

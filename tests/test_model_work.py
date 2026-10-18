@@ -211,20 +211,20 @@ class ProviderAndTutorTests(unittest.TestCase):
 
     def test_provider_credentials_are_not_crossed(self):
         client = TestClient(app)
-        with patch.dict('os.environ',{'NVIDIA_API_KEY':''}), patch('server.request_open_text') as request:
+        with patch.dict('os.environ',{'NVIDIA_API_KEY':''}), patch('server.request_text') as request:
             response = client.post('/api/feedback',headers={'X-Anthropic-Key':'claude-key'},json={
                 'provider':'nvidia','source':'source','paragraph':'paragraph'})
-            self.assertEqual(response.status_code,400)
+            self.assertEqual(response.status_code,422)
             request.assert_not_called()
 
-    @patch('server.request_open_text',return_value='Why does that detail support your claim?')
+    @patch('server.request_text',return_value='Why does that detail support your claim?')
     def test_tutor_uses_provider_classroom_and_hint_policy(self,request):
-        response = TestClient(app).post('/api/tutor',headers={'X-Model-Key':'test-nvidia-key'},json={
-            'provider':'nvidia','model':'nvidia/test-model','grade':'Grade 7','source':'source text',
+        response = TestClient(app).post('/api/tutor',headers={'X-Model-Key':'test-claude-key'},json={
+            'provider':'anthropic','model':'claude-sonnet-5-5','grade':'Grade 7','source':'source text',
             'paragraph':'my paragraph','question':'Why did they help?', 'student_message':'Write my paragraph for me.'})
         self.assertEqual(response.status_code,200)
         self.assertIn('Why',response.json()['reply'])
-        self.assertEqual(request.call_args.kwargs['provider'],'nvidia')
+        self.assertEqual(request.call_args.args[1],'claude-sonnet-5-5')
         self.assertIn('Do not write a finished paragraph',request.call_args.args[2])
         self.assertIn('Why did they help?',request.call_args.args[3])
 

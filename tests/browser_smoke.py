@@ -55,7 +55,9 @@ try:
         assert '9 words' in page.locator('#word-count').inner_text()
         assert page.evaluate('localStorage.length') == 0
         assert page.evaluate('sessionStorage.length') == 0
+        feedback_calls = []
         def grading(route):
+            feedback_calls.append(route.request.post_data_json)
             assert 'speaker' in route.request.post_data_json['question']
             route.fulfill(json={'feedback': '## Score\n7/10\n\n**Good evidence.**\n<script>window.unsafe=true</script>'})
         page.route('**/api/feedback', grading)
@@ -64,20 +66,23 @@ try:
         assert '7/10' in page.locator('#feedback-content').inner_text()
         assert page.locator('#feedback-content strong').inner_text() == 'Good evidence.'
         assert page.evaluate('window.unsafe') is None
+        page.locator('#grade-button').click()
+        assert 'existing feedback' in page.locator('#feedback-message').inner_text()
+        assert len(feedback_calls) == 1
         page.locator('#paragraph').fill('My revision.')
         assert page.locator('#stale-note').is_visible()
         with page.expect_download() as download:
             page.locator('#download').click()
         assert download.value.suggested_filename == 'analytical-feedback.md'
-        page.locator('#provider').select_option('nvidia')
-        assert page.locator('#api-key').input_value() == ''
-        assert 'nvidia/nemotron-3-ultra' in page.locator('#model').input_value()
-        page.locator('#api-key').fill('test-nvidia-key')
+        assert page.locator('#provider').input_value() == 'anthropic'
+        assert page.locator('#model option').count() == 5
+        page.locator('#model').select_option('claude-sonnet-5-5')
+        assert page.locator('#api-key').input_value() == 'test-key'
         def tutoring(route):
             data = route.request.post_data_json
-            assert data['provider'] == 'nvidia'
+            assert data['provider'] == 'anthropic'
             assert data['grade'] == 'Grade 7'
-            assert route.request.headers['x-model-key'] == 'test-nvidia-key'
+            assert route.request.headers['x-model-key'] == 'test-key'
             route.fulfill(json={'reply':'Focus on why the volunteer stays. What does that reveal about their motive?'})
         page.route('**/api/tutor',tutoring)
         page.locator('#tutor-question').fill('How can I explain my evidence?')
@@ -106,7 +111,7 @@ try:
         page.screenshot(path='/tmp/reasoning-studio-mobile.png', full_page=True)
         assert not errors, errors
         browser.close()
-    print('PASS browser: rendering, manual key, generation, grading, word count, safe feedback, stale notice, download, provider key isolation, tutoring, teacher review export, mobile layout')
+    print('PASS browser: rendering, manual key, generation, grading, word count, safe feedback, stale notice, download, Claude-only models, tutoring, teacher review export, mobile layout')
 finally:
     server.terminate()
     server.wait(timeout=10)
