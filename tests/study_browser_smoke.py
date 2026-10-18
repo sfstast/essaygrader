@@ -59,7 +59,12 @@ with TemporaryDirectory() as temp:
             page.locator('#vocab-sentence-1').fill('The meticulous chef weighed every ingredient.')
             page.locator('#grade-vocab').click()
             assert 'Anthropic key' in page.locator('#vocab-message').inner_text()
+            if not page.locator('#classroom-settings').evaluate('(el) => el.open'):
+                page.locator('#classroom-settings > summary').click()
             page.locator('#api-key').fill('fake-key')
+            page.locator('#classroom-settings > summary').click()
+            assert not page.locator('#api-key').is_visible()
+            assert 'AI key entered' in page.locator('#setup-summary').inner_text()
             vocab_calls=[]
             def vocabulary(route):
                 data=route.request.post_data_json;vocab_calls.append(data)
@@ -121,8 +126,8 @@ with TemporaryDirectory() as temp:
             page.screenshot(path='/tmp/reasoning-studio-sentence-mobile.png',full_page=True)
             # Topic selection on the welcome page drives questions and writing targets.
             page.locator('a[aria-label="Reasoning Studio home"]').click()
-            page.locator('[data-focus-shortcut="sentences"]').click()
-            assert page.locator('#welcome-pattern-picker').is_visible()
+            page.locator('input[name="focus"][value="sentences"]').check()
+            page.locator('#welcome-pattern-picker').wait_for(state='visible')
             page.locator('#welcome-pattern-picker [data-pattern-preset="clear"]').click()
             assert page.locator('#start-learning').is_disabled()
             page.locator('#welcome-pattern-choices input[data-pattern-id="participial"]').check()
@@ -146,6 +151,8 @@ with TemporaryDirectory() as temp:
             page.locator('#writing-tools').wait_for(state='visible')
             page.locator('#source').fill('Keep my source text.')
             page.locator('#paragraph').fill('Keep my working draft.')
+            if not page.locator('#classroom-settings').evaluate('(el) => el.open'):
+                page.locator('#classroom-settings > summary').click()
             page.locator('#api-key').fill('do-not-save-test-key')
             page.locator('#account-open').click()
             page.wait_for_function("!document.querySelector('[data-social-provider=google]').disabled")

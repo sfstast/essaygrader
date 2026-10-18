@@ -11,12 +11,19 @@ const learningGoal = () => $('learning-goal').value.trim();
 
 const keyName = () => 'Anthropic key';
 const hasKey = () => $('api-key').value.trim();
+function requireKey() {
+  if (hasKey()) return true;
+  $('classroom-settings').open = true;
+  $('api-key').focus();
+  return false;
+}
 const payload = () => ({...Object.fromEntries(fields.map(id => [id, $(id).value])), learning_goal:learningGoal()});
 const snapshot = () => JSON.stringify({...Object.fromEntries(fields.filter(id => !['topic', 'mode'].includes(id)).map(id => [id, $(id).value])), learning_goal:learningGoal()});
 function message(id, text, kind = 'error') {
   const el = $(id); el.textContent = text; el.className = `message ${kind}`; el.hidden = !text;
 }
 function update() {
+  $('setup-summary').textContent = `${$('grade').value.startsWith('Grade') ? $('grade').value : 'Choose your level'} · ${hasKey() ? 'AI key entered' : 'Add a key for AI feedback'}`;
   $('goal-reminder').textContent = learningGoal() || 'One useful step at a time.';
   updateVocabStale();
   updateSentenceStale();
@@ -87,7 +94,7 @@ function renderFeedback(text) {
 $('generate').addEventListener('click', async () => {
   if (busy) return;
   message('generation-message', ''); const data = payload();
-  if (!hasKey()) return message('generation-message', `Enter your ${keyName()} in the classroom panel.`);
+  if (!requireKey()) return message('generation-message', `Enter your ${keyName()} under Classroom & AI settings.`);
   if (data.source.trim() && data.question.trim()) return message('generation-message', 'Both fields already have content. Clear the field you want to generate.');
   if (data.mode === 'question' && !data.source.trim()) return message('generation-message', 'Paste source text first, or choose a practice source and question.');
   setBusy(true, 'generate');
@@ -106,7 +113,7 @@ $('grade-button').addEventListener('click', async () => {
   if (busy) return;
   message('feedback-message', '');
   const data = payload(), submittedSnapshot = snapshot();
-  if (!hasKey()) return message('feedback-message', `Enter your ${keyName()} in the classroom panel.`);
+  if (!requireKey()) return message('feedback-message', `Enter your ${keyName()} under Classroom & AI settings.`);
   if (!data.source.trim() || !data.paragraph.trim()) return message('feedback-message', 'Add both source text and an analytical paragraph.');
   if (feedback && submittedSnapshot === feedbackSnapshot) {
     message('feedback-message', 'Showing your existing feedback. Revise your writing or settings to request a new review.', 'info');
@@ -126,7 +133,7 @@ $('tutor-send').addEventListener('click', async () => {
   if (busy) return;
   message('tutor-message','');
   const data = payload(), submitted = snapshot(), question = $('tutor-question').value.trim();
-  if (!hasKey()) return message('tutor-message',`Enter your ${keyName()} in the classroom panel.`);
+  if (!requireKey()) return message('tutor-message',`Enter your ${keyName()} under Classroom & AI settings.`);
   if (!data.source.trim() || !data.paragraph.trim()) return message('tutor-message','Add source text and your paragraph before asking for a hint.');
   if (!question) return message('tutor-message','Ask a writing question first.');
   setBusy(true,'tutor');
@@ -180,7 +187,7 @@ function route() {
   }
   document.title = home ? 'Reasoning Studio — Find your next step' : activity === 'vocabulary' ? 'Vocabulary practice — Reasoning Studio' : activity === 'sentences' ? 'Sentence lab — Reasoning Studio' : 'Writing workspace — Reasoning Studio';
 }
-window.addEventListener('hashchange',route);
+window.addEventListener('hashchange', () => {route(); window.scrollTo({top:0,behavior:'instant'});});
 $('goal-form').addEventListener('submit',async event => {
   event.preventDefault(); if (!config) return;
   const focus = document.querySelector('input[name="focus"]:checked').value;
@@ -279,7 +286,7 @@ function renderVocabulary(result) {
 $('grade-vocab').addEventListener('click',async()=>{
   if (busy || !studyWords.length) return;
   message('vocab-message','');
-  if (!hasKey()) return message('vocab-message','Enter your Anthropic key in the classroom panel.');
+  if (!requireKey()) return message('vocab-message','Enter your Anthropic key under Classroom & AI settings.');
   const answers=vocabularyAnswers();
   if (answers.some(row=>!row.definition || !row.sentence)) return message('vocab-message','Add your definition and an example sentence for every word.');
   const submitted=vocabularySnapshot();
@@ -403,7 +410,7 @@ $('sentence-target').addEventListener('change',updateSentenceTarget);$('practice
 $('review-sentence').addEventListener('click',async()=>{
   if(busy || !sentenceData) return;
   message('sentence-message','');
-  if(!hasKey()) return message('sentence-message','Enter your Anthropic key in the classroom panel.');
+  if(!requireKey()) return message('sentence-message','Enter your Anthropic key under Classroom & AI settings.');
   if(!$('practice-sentence').value.trim()) return message('sentence-message','Write an original sentence first.');
   const submitted=sentenceSnapshot();
   if(sentenceReview && submitted===sentenceReviewSnapshot) return message('sentence-message','Showing your existing review. Revise the sentence or change the target for another check.','info');
