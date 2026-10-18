@@ -8,6 +8,19 @@ Experimental Qwen2.5-1.5B inference server. No adapter is bundled. Without
 ADAPTER_PATH it serves the original base instruction model, not a trained grader.
 The previous adapter has not demonstrated reliable grading accuracy.
 
+## Free temporary hosting with Colab
+
+[Open the Colab hosting notebook](https://colab.research.google.com/github/sfstast/essaygrader/blob/main/notebooks/free_colab_hosting.ipynb).
+Choose a T4 GPU and Run all. Upload both adapter files and enter the Render API
+key in the hidden prompt. The notebook tests generation, opens an authenticated
+temporary tunnel, configures only the three open-model variables on the existing
+Render website, and redeploys it. No Hugging Face account or PRO subscription is
+required. Runtime availability is not guaranteed; hosting stops when Colab
+disconnects. Rerun the notebook to reconnect. Full Colab execution has not been
+verified from this workspace.
+
+## Hugging Face hosting
+
 Create a Hugging Face Docker Space with CPU Basic hardware and copy this
 directory's files into its root. Inference is slow and the space may sleep.
 On this account, Hugging Face currently requires a PRO subscription to create
