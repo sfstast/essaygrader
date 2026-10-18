@@ -3,15 +3,23 @@ const $ = id => document.getElementById(id);
 const fields = ['provider', 'grade', 'class_level', 'model', 'question', 'source', 'paragraph', 'extra', 'topic', 'mode'];
 let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = false;
 let tutorHistory = [], tutorSnapshot = '';
+let studyWords = [], vocabResult = null, vocabResultSnapshot = '';
+let sentenceData=null, sentenceLoad=null, identificationDeck=[], currentIdentification=null, identificationAnswered=false, identificationCorrect=0, identificationTried=0;
+let sentenceReview=null, sentenceReviewSnapshot='';
+let accountState={available:false,user:null}, accountMode='signup';
+const learningGoal = () => $('learning-goal').value.trim();
 
 const keyName = () => 'Anthropic key';
 const hasKey = () => $('api-key').value.trim();
-const payload = () => Object.fromEntries(fields.map(id => [id, $(id).value]));
-const snapshot = () => JSON.stringify(Object.fromEntries(fields.filter(id => !['topic', 'mode'].includes(id)).map(id => [id, $(id).value])));
+const payload = () => ({...Object.fromEntries(fields.map(id => [id, $(id).value])), learning_goal:learningGoal()});
+const snapshot = () => JSON.stringify({...Object.fromEntries(fields.filter(id => !['topic', 'mode'].includes(id)).map(id => [id, $(id).value])), learning_goal:learningGoal()});
 function message(id, text, kind = 'error') {
   const el = $(id); el.textContent = text; el.className = `message ${kind}`; el.hidden = !text;
 }
 function update() {
+  $('goal-reminder').textContent = learningGoal() || 'One useful step at a time.';
+  updateVocabStale();
+  updateSentenceStale();
   const text = $('paragraph').value;
   $('word-count').textContent = `${text.trim() ? text.trim().split(/\s+/u).length : 0} words · ${text.length} characters`;
   $('generation-controls').hidden = $('mode').value === 'own';
@@ -33,10 +41,15 @@ function setBusy(value, action) {
   $('generate').disabled = value || !config;
   $('grade-button').disabled = value || !config;
   $('tutor-send').disabled = value || !config;
+  $('grade-vocab').disabled = value || !config;
+  $('build-vocab').disabled = value || !config;
+  $('review-sentence').disabled = value || !config || !sentenceData;
+  $('review-sentence').textContent = value && action === 'sentence' ? 'Reading your sentence…' : 'Check my sentence →';
+  $('grade-vocab').textContent = value && action === 'vocabulary' ? 'Checking your words…' : 'Check my vocabulary →';
   $('tutor-send').textContent = value && action === 'tutor' ? 'Thinking about your next step…' : 'Ask for a writing hint';
   $('generate').textContent = value && action === 'generate' ? 'Preparing your assignment…' : '✦ Generate missing material';
   $('grade-button').textContent = value && action === 'feedback' ? 'Reading your evidence and reasoning…' : 'Get analytical feedback →';
-  $(action === 'generate' ? 'generation-controls' : action === 'tutor' ? 'tutor-panel' : 'feedback-panel').setAttribute('aria-busy', String(value));
+  $(action === 'generate' ? 'generation-controls' : action === 'tutor' ? 'tutor-panel' : action === 'vocabulary' ? 'vocab-practice' : action === 'sentence' ? 'sentence-write-panel' : 'feedback-panel').setAttribute('aria-busy', String(value));
 }
 async function request(path, data) {
   const controller = new AbortController();
@@ -153,7 +166,235 @@ $('download').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([feedback], {type: 'text/markdown;charset=utf-8'}));
   const link = document.createElement('a'); link.href = url; link.download = 'analytical-feedback.md'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-[...fields, 'api-key'].forEach(id => {$(id).addEventListener('input',update); $(id).addEventListener('change',update);});
+[...fields, 'api-key', 'learning-goal'].forEach(id => {$(id).addEventListener('input',update); $(id).addEventListener('change',update);});
+function route() {
+  const activity = location.hash === '#vocabulary' ? 'vocabulary' : location.hash === '#sentences' ? 'sentences' : location.hash === '#workspace' ? 'writing' : 'welcome';
+  const home = activity === 'welcome';
+  $('welcome').hidden = !home; $('workspace').hidden = home; $('workspace-nav').hidden = home;
+  $('writing-tools').hidden = activity !== 'writing'; $('vocabulary-tools').hidden = activity !== 'vocabulary'; $('sentence-tools').hidden = activity !== 'sentences';
+  if (activity === 'sentences') loadSentenceLab().catch(error=>message('sentence-load-message',error.message));
+  for (const [id, active] of [['writing-tab',activity === 'writing'],['vocabulary-tab',activity === 'vocabulary'],['sentences-tab',activity === 'sentences']]) {
+    $(id).classList.toggle('active',active);
+    if (active) $(id).setAttribute('aria-current','page'); else $(id).removeAttribute('aria-current');
+  }
+  document.title = home ? 'Reasoning Studio — Find your next step' : activity === 'vocabulary' ? 'Vocabulary practice — Reasoning Studio' : activity === 'sentences' ? 'Sentence lab — Reasoning Studio' : 'Writing workspace — Reasoning Studio';
+}
+window.addEventListener('hashchange',route);
+$('goal-form').addEventListener('submit',event => {
+  event.preventDefault(); if (!config) return;
+  $('grade').value=$('welcome-grade').value;
+  const focus = document.querySelector('input[name="focus"]:checked').value;
+  if (!learningGoal()) $('learning-goal').value = focus === 'vocabulary' ? 'Use new vocabulary with confidence.' : focus === 'sentences' ? 'Use sentence structures and phrases with confidence.' : focus === 'revision' ? 'Make my draft clearer and stronger.' : 'Support my ideas with clear evidence and reasoning.';
+  update(); location.hash = focus === 'vocabulary' ? 'vocabulary' : focus === 'sentences' ? 'sentences' : 'workspace';
+});
+$('grade').addEventListener('change',()=>{$('welcome-grade').value=$('grade').value;});
+function parseStudyWords(text) {
+  const lines=text.split(/\r?\n/).flatMap(line => /[:—–]/u.test(line) ? [line] : line.split(',')).map(line=>line.trim()).filter(Boolean);
+  if (!lines.length || lines.length>10) throw new Error('Add between 1 and 10 study words.');
+  const words=lines.map(line=>{
+    const match=line.match(/^([^:—–]+)[:—–](.*)$/u);
+    const word=(match ? match[1] : line).trim(), reference_meaning=(match ? match[2] : '').trim();
+    if (!word || word.length>80 || reference_meaning.length>300) throw new Error('Keep each word under 80 characters and each supplied meaning under 300.');
+    return {word,reference_meaning};
+  });
+  if (new Set(words.map(row=>row.word.toLocaleLowerCase())).size!==words.length) throw new Error('Use each study word only once.');
+  return words;
+}
+function vocabularyAnswers() {
+  return studyWords.map((row,i)=>({...row,definition:$(`vocab-definition-${i}`).value.trim(),sentence:$(`vocab-sentence-${i}`).value.trim()}));
+}
+function vocabularySnapshot() {
+  return JSON.stringify({grade:$('grade').value,class_level:$('class_level').value,model:$('model').value,learning_goal:learningGoal(),answers:vocabularyAnswers()});
+}
+function updateVocabStale() {
+  $('vocab-stale').hidden = !vocabResult || vocabularySnapshot() === vocabResultSnapshot;
+}
+$('build-vocab').addEventListener('click',()=>{
+  message('vocab-setup-message','');
+  try {
+    const words=parseStudyWords($('vocab-words').value);
+    studyWords=words; vocabResult=null; vocabResultSnapshot='';
+    $('vocab-cards').replaceChildren(); $('vocab-results').hidden=true; message('vocab-message','');
+    words.forEach((row,i)=>{
+      const card=document.createElement('article');card.className='vocab-answer-card';
+      const title=document.createElement('h3'); title.textContent=`${String(i+1).padStart(2,'0')} · ${row.word}`;card.append(title);
+      for (const [kind,label,placeholder,limit] of [['definition','In your own words, what does it mean?','Explain the meaning without copying a dictionary.',400],['sentence','Use it in a sentence','Give enough context to show what the word means.',600]]) {
+        const input=document.createElement('textarea');input.id=`vocab-${kind}-${i}`;input.rows=2;input.maxLength=limit;input.placeholder=placeholder;
+        const inputLabel=document.createElement('label');inputLabel.htmlFor=input.id;inputLabel.textContent=label;
+        input.addEventListener('input',updateVocabStale);card.append(inputLabel,input);
+      }
+      $('vocab-cards').append(card);
+    });
+    $('vocab-practice').hidden=false; $('replace-vocab-note').hidden=false;
+    $('vocab-definition-0').focus();
+  } catch(error) {message('vocab-setup-message',error.message);}
+});
+function renderVocabulary(result) {
+  $('vocab-score').textContent=`${result.earned} / ${result.possible} points · ${result.percentage}%`;
+  $('vocab-review').textContent=result.review_words.length ? `A little more practice: ${result.review_words.join(', ')}.` : 'You demonstrated every word. Try a new context to make them stick.';
+  const container=$('vocab-result-cards');container.replaceChildren();
+  for (const row of result.results) {
+    const card=document.createElement('article');card.className='vocab-result-card';
+    const title=document.createElement('h3');title.textContent=`${row.word} · ${row.points}/4`;card.append(title);
+    for (const text of [`Meaning: ${row.meaning_score}/2 · Use in context: ${row.usage_score}/2`,row.feedback,`Meaning to remember: ${row.suggested_definition}`,`In context: ${row.example_sentence}`]) {
+      const paragraph=document.createElement('p');paragraph.textContent=text;card.append(paragraph);
+    }
+    container.append(card);
+  }
+  $('vocab-grading-note').textContent=result.grading_note;
+  $('vocab-results').hidden=false; updateVocabStale();
+}
+$('grade-vocab').addEventListener('click',async()=>{
+  if (busy || !studyWords.length) return;
+  message('vocab-message','');
+  if (!hasKey()) return message('vocab-message','Enter your Anthropic key in the classroom panel.');
+  const answers=vocabularyAnswers();
+  if (answers.some(row=>!row.definition || !row.sentence)) return message('vocab-message','Add your definition and an example sentence for every word.');
+  const submitted=vocabularySnapshot();
+  if (vocabResult && submitted===vocabResultSnapshot) {message('vocab-message','Showing your existing review. Revise an answer to request another check.','info');$('vocab-results').scrollIntoView({behavior:'smooth'});return;}
+  const data={provider:'anthropic',model:$('model').value,grade:$('grade').value,class_level:$('class_level').value,learning_goal:learningGoal(),answers};
+  setBusy(true,'vocabulary');
+  try {
+    const result=await request('vocabulary/grade',data);
+    if (submitted!==vocabularySnapshot()) {message('vocab-message','Your answers or settings changed while grading. Your edits were kept; check them again.','warning');return;}
+    vocabResult=result;vocabResultSnapshot=submitted;renderVocabulary(result);$('vocab-results').scrollIntoView({behavior:'smooth',block:'start'});
+  } catch(error) {message('vocab-message',error.message);}
+  finally {setBusy(false,'vocabulary');}
+});
+async function loadSentenceLab() {
+  if (sentenceData) return;
+  if (sentenceLoad) return sentenceLoad;
+  sentenceLoad=(async()=>{
+    const response=await fetch('/api/sentence-lab');if(!response.ok) throw new Error('The sentence lab could not load. Refresh to try again.');
+    sentenceData=await response.json();
+    $('sentence-target').replaceChildren(...sentenceData.lessons.map(lesson=>{const option=document.createElement('option');option.value=lesson.id;option.textContent=lesson.label;return option;}));
+    $('sentence-target').value='participial';$('sentence-target').disabled=false;
+    $('sentence-reference').replaceChildren();
+    for (const lesson of sentenceData.lessons) {
+      const title=document.createElement('h3');title.textContent=lesson.label;
+      const description=document.createElement('p');description.className='criteria';description.textContent=lesson.description;
+      const example=document.createElement('p');example.className='small muted';example.textContent=lesson.example;
+      $('sentence-reference').append(title,description,example);
+    }
+    updateSentenceTarget();nextIdentification();$('next-identify').disabled=false;
+    $('review-sentence').disabled=busy || !config;
+  })();
+  try {await sentenceLoad;} catch(error) {sentenceLoad=null;throw error;}
+}
+function shuffled(items) {
+  const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;
+}
+function nextIdentification() {
+  if (!sentenceData) return;
+  const group=$('identify-category').value;
+  if (!identificationDeck.length) identificationDeck=shuffled(sentenceData.exercises.filter(row=>sentenceData.lessons.find(lesson=>lesson.id===row.target_id).group===group));
+  currentIdentification=identificationDeck.pop();identificationAnswered=false;
+  const container=$('identify-sentence');container.replaceChildren();
+  const {sentence,highlight}=currentIdentification;
+  if (highlight) {
+    const index=sentence.indexOf(highlight), mark=document.createElement('mark');mark.textContent=highlight;
+    container.append(document.createTextNode(sentence.slice(0,index)),mark,document.createTextNode(sentence.slice(index+highlight.length)));
+  } else container.textContent=sentence;
+  $('identify-instruction').textContent=group==='phrases' ? 'Name the highlighted phrase. Instant checking is free and needs no API key.' : 'Classify the whole sentence by its clauses. Instant checking is free and needs no API key.';
+  $('identify-choices').replaceChildren(...shuffled(sentenceData.lessons.filter(lesson=>lesson.group===group)).map(lesson=>{
+    const label=document.createElement('label');label.className='identify-choice';
+    const input=document.createElement('input');input.type='radio';input.name='identify-answer';input.value=lesson.id;
+    const text=document.createElement('span');text.textContent=lesson.label;label.append(input,text);return label;
+  }));
+  $('check-identify').disabled=false;message('identify-feedback','');
+}
+$('identify-category').addEventListener('change',()=>{identificationDeck=[];nextIdentification();});
+$('next-identify').addEventListener('click',nextIdentification);
+$('check-identify').addEventListener('click',()=>{
+  if (!currentIdentification || identificationAnswered) return;
+  const selected=document.querySelector('input[name="identify-answer"]:checked');
+  if (!selected) return message('identify-feedback','Choose a structure or phrase type first.');
+  identificationAnswered=true;identificationTried++;
+  const correct=selected.value===currentIdentification.target_id;if(correct) identificationCorrect++;
+  const lesson=sentenceData.lessons.find(row=>row.id===currentIdentification.target_id);
+  message('identify-feedback',`${correct ? 'You’ve got it.' : 'Keep practicing.'} ${lesson.label}: ${currentIdentification.explanation}`,correct?'success':'warning');
+  $('identify-progress').textContent=`${identificationCorrect} correct · ${identificationTried} tried`;
+  $('check-identify').disabled=true;
+});
+function sentenceMode(mode) {
+  $('identify-panel').hidden=mode!=='identify';$('sentence-write-panel').hidden=mode!=='write';
+  for (const [id,active] of [['identify-mode',mode==='identify'],['write-mode',mode==='write']]) {$(id).classList.toggle('selected',active);$(id).setAttribute('aria-pressed',String(active));}
+}
+$('identify-mode').addEventListener('click',()=>sentenceMode('identify'));
+$('write-mode').addEventListener('click',()=>sentenceMode('write'));
+function updateSentenceTarget() {
+  if (!sentenceData) return;
+  const lesson=sentenceData.lessons.find(row=>row.id===$('sentence-target').value);
+  $('sentence-description').textContent=lesson.description;$('sentence-example-hint').textContent='Example: '+lesson.example;updateSentenceStale();
+}
+function sentenceSnapshot() {return JSON.stringify({sentence:$('practice-sentence').value.trim(),target_id:$('sentence-target').value,grade:$('grade').value,model:$('model').value,learning_goal:learningGoal()});}
+function updateSentenceStale() {$('sentence-result-stale').hidden=!sentenceReview || sentenceSnapshot()===sentenceReviewSnapshot;}
+$('sentence-target').addEventListener('change',updateSentenceTarget);$('practice-sentence').addEventListener('input',updateSentenceStale);
+$('review-sentence').addEventListener('click',async()=>{
+  if(busy || !sentenceData) return;
+  message('sentence-message','');
+  if(!hasKey()) return message('sentence-message','Enter your Anthropic key in the classroom panel.');
+  if(!$('practice-sentence').value.trim()) return message('sentence-message','Write an original sentence first.');
+  const submitted=sentenceSnapshot();
+  if(sentenceReview && submitted===sentenceReviewSnapshot) return message('sentence-message','Showing your existing review. Revise the sentence or change the target for another check.','info');
+  setBusy(true,'sentence');
+  try {
+    const result=await request('sentence-lab/review',{provider:'anthropic',model:$('model').value,grade:$('grade').value,class_level:$('class_level').value,learning_goal:learningGoal(),target_id:$('sentence-target').value,sentence:$('practice-sentence').value.trim()});
+    if(submitted!==sentenceSnapshot()) return message('sentence-message','Your sentence or settings changed while reviewing. Your edits were kept; check again.','warning');
+    sentenceReview=result;sentenceReviewSnapshot=submitted;
+    $('sentence-verdict').textContent=`${result.matches_target?'Target demonstrated':'A little more practice'} · ${result.target_label}`;
+    $('sentence-explanation').textContent=result.explanation;
+    $('sentence-parts').replaceChildren(...result.parts.map(part=>{const item=document.createElement('li');item.textContent=`“${part.text}” — ${part.role}`;return item;}));
+    $('sentence-next-step').textContent='Next step: '+result.next_step;$('sentence-revision').textContent='One possible example: '+result.example_revision;
+    $('sentence-result').hidden=false;updateSentenceStale();
+  } catch(error){message('sentence-message',error.message);} finally{setBusy(false,'sentence');}
+});
+async function accountRequest(path,data,method='POST') {
+  const response=await fetch('/api/account/'+path,{method,headers:{'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});
+  const result=await response.json();if(!response.ok) throw new Error(typeof result.detail==='string'?result.detail:'Check your account details and try again.');return result;
+}
+function updateAccount() {
+  const user=accountState.user;
+  $('account-open').textContent=user ? user.display_name : 'Account';
+  $('account-guest').hidden=!!user;$('account-member').hidden=!user;
+  $('account-submit').disabled=!accountState.available;
+  $('account-storage-note').textContent=accountState.available ? 'An optional account saves your learning goal and recent practice results. Your API key and drafts are never saved.' : 'Accounts are prepared, but a persistent database still needs to be connected. All practice tools work as a guest.';
+  if(user) $('account-greeting').textContent='Welcome, '+user.display_name+'.';
+}
+async function loadAccount(applyProfile=false) {
+  try {
+    accountState=await accountRequest('me',null,'GET');updateAccount();
+    if(applyProfile && accountState.user && config) {
+      const user=accountState.user;if(!learningGoal()) $('learning-goal').value=user.learning_goal;
+      if(config.grades.includes(user.grade)) {$('grade').value=user.grade;$('welcome-grade').value=user.grade;}
+      update();
+    }
+    if(accountState.user) {
+      const history=await accountRequest('history',null,'GET');
+      $('account-history').replaceChildren(...history.activities.map(activity=>{const item=document.createElement('li');item.textContent=activity.summary;return item;}));
+      if(!history.activities.length) {const item=document.createElement('li');item.textContent='Your next completed review will appear here.';$('account-history').append(item);}
+    }
+  } catch(error) {message('account-message',error.message);}
+}
+$('account-open').addEventListener('click',()=>{$('account-dialog').showModal();loadAccount();});
+$('account-close').addEventListener('click',()=>{$('account-dialog').close();$('account-password').value='';});
+$('account-dialog').addEventListener('close',()=>{$('account-password').value='';});
+function accountModeSelect(mode) {
+  accountMode=mode;$('display-name-field').hidden=mode!=='signup';$('account-password').autocomplete=mode==='signup'?'new-password':'current-password';$('account-submit').textContent=mode==='signup'?'Create my account':'Sign in';
+  for(const [id,active] of [['signup-mode',mode==='signup'],['login-mode',mode==='login']]) {$(id).classList.toggle('selected',active);$(id).setAttribute('aria-pressed',String(active));}
+  message('account-message','');
+}
+$('signup-mode').addEventListener('click',()=>accountModeSelect('signup'));$('login-mode').addEventListener('click',()=>accountModeSelect('login'));
+$('account-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!accountState.available) return;
+  $('account-submit').disabled=true;message('account-message','');
+  const data={username:$('account-username').value.trim(),password:$('account-password').value};
+  if(accountMode==='signup') {data.display_name=$('account-name').value.trim();data.learning_goal=learningGoal();data.grade=$('welcome').hidden?$('grade').value:$('welcome-grade').value;}
+  try{await accountRequest(accountMode,data);$('account-password').value='';await loadAccount(true);message('account-message','You’re signed in. Your next completed reviews will be saved.','success');}
+  catch(error){message('account-message',error.message);}finally{$('account-submit').disabled=!accountState.available;}
+});
+$('save-profile').addEventListener('click',async()=>{try{await accountRequest('profile',{learning_goal:learningGoal(),grade:$('grade').value},'PATCH');message('account-message','Your goal and grade are saved.','success');}catch(error){message('account-message',error.message);}});
+$('account-logout').addEventListener('click',async()=>{try{await accountRequest('logout',{});accountState.user=null;$('api-key').value='';updateAccount();update();message('account-message','Signed out. Your key is cleared; current practice stays in this tab.','success');}catch(error){message('account-message',error.message);}});
 async function initialize() {
   try {
     const response = await fetch('/api/config'); if (!response.ok) throw new Error(); config = await response.json();
@@ -163,9 +404,13 @@ async function initialize() {
     }
     $('model').replaceChildren(...config.models.map(model => {const option = document.createElement('option'); option.value = model.id; option.textContent = model.label; return option;}));
     $('model').disabled = false;
+    $('welcome-grade').replaceChildren(...config.grades.map(value => {const option=document.createElement('option');option.value=value;option.textContent=value;return option;}));
+    $('welcome-grade').value=$('grade').value; $('welcome-grade').disabled=false;
+    $('start-learning').disabled=false;
     $('user-rubric').textContent = config.training_rubric.text;
     $('reference-status').textContent = config.references.amplify_loaded ? 'Your rubric, style comparisons, and Amplify reference excerpts are loaded.' : 'Your rubric and style comparisons are loaded. Amplify references are not loaded yet.';
-    $('model').value = config.model; $('core-criteria').textContent = config.core_criteria; setBusy(false,'feedback'); update();
+    $('model').value = config.model; $('core-criteria').textContent = config.core_criteria; setBusy(false,'feedback'); update(); loadAccount(true);
   } catch {message('feedback-message','The classroom settings could not load. Refresh the page to retry.');}
 }
+route();
 initialize();
