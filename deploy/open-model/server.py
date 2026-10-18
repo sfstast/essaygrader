@@ -18,12 +18,17 @@ async def lifespan(app):
     if len(os.environ.get('MODEL_SERVER_KEY', '')) < 32:
         raise RuntimeError('Set MODEL_SERVER_KEY to a random secret of at least 32 characters.')
     import torch
+    torch.set_num_threads(int(os.environ.get('MODEL_CPU_THREADS', '2')))
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, revision=MODEL_REVISION)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID, revision=MODEL_REVISION, torch_dtype=torch.float32,
         low_cpu_mem_usage=True)
     adapter = os.environ.get('ADAPTER_PATH')
+    if os.environ.get('ADAPTER_REPO'):
+        from huggingface_hub import snapshot_download
+        adapter = snapshot_download(os.environ['ADAPTER_REPO'],
+                                    allow_patterns=['adapter_config.json', 'adapter_model.safetensors'])
     if adapter:
         from peft import PeftModel
         model = PeftModel.from_pretrained(model, adapter)
@@ -57,7 +62,7 @@ class Completion(BaseModel):
 @app.get('/health')
 def health():
     return {'status': 'ok' if state else 'loading',
-            'adapter_loaded': bool(os.environ.get('ADAPTER_PATH'))}
+            'adapter_loaded': bool(os.environ.get('ADAPTER_PATH') or os.environ.get('ADAPTER_REPO'))}
 
 
 @app.post('/v1/chat/completions', dependencies=[Depends(authorize)])

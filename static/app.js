@@ -5,6 +5,7 @@ let config, feedback = '', feedbackSnapshot = '', generatedSource = '', busy = f
 let tutorHistory = [], tutorSnapshot = '';
 const providerDetails = () => config?.providers?.find(p => p.id === $('provider').value);
 const keyName = () => providerDetails()?.key_label || 'Anthropic key';
+const hasKey = () => $('api-key').value.trim() || providerDetails()?.server_key_configured;
 const payload = () => Object.fromEntries(fields.map(id => [id, $(id).value]));
 const snapshot = () => JSON.stringify(Object.fromEntries(fields.filter(id => !['topic', 'mode'].includes(id)).map(id => [id, $(id).value])));
 function message(id, text, kind = 'error') {
@@ -16,7 +17,7 @@ function update() {
   $('generation-controls').hidden = $('mode').value === 'own';
   $('generated-note').hidden = !generatedSource || generatedSource !== $('source').value;
   $('stale-note').hidden = !feedback || snapshot() === feedbackSnapshot;
-  $('key-status').textContent = $('api-key').value.trim() ? 'Key entered · only held in this tab.' : 'Only held in this tab. Never saved to browser storage.';
+  $('key-status').textContent = providerDetails()?.server_key_configured ? 'Model access is configured by the site owner. No key needed.' : $('api-key').value.trim() ? 'Key entered · only held in this tab.' : 'Only held in this tab. Never saved to browser storage.';
   if (tutorHistory.length && snapshot() !== tutorSnapshot) {
     tutorHistory = []; $('tutor-conversation').replaceChildren();
     message('tutor-message', 'Assignment or settings changed. Your next question starts a new tutoring conversation.', 'warning');
@@ -39,7 +40,7 @@ function setBusy(value, action) {
 }
 async function request(path, data) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 130000);
+  const timeout = setTimeout(() => controller.abort(), data.provider === 'open_model' ? 330000 : 130000);
   try {
     const response = await fetch(`/api/${path}`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Model-Key': $('api-key').value.trim()}, body: JSON.stringify(data), signal: controller.signal});
     const result = await response.json();
@@ -72,7 +73,7 @@ function renderFeedback(text) {
 $('generate').addEventListener('click', async () => {
   if (busy) return;
   message('generation-message', ''); const data = payload();
-  if (!$('api-key').value.trim()) return message('generation-message', `Enter your ${keyName()} in the classroom panel.`);
+  if (!hasKey()) return message('generation-message', `Enter your ${keyName()} in the classroom panel.`);
   if (data.source.trim() && data.question.trim()) return message('generation-message', 'Both fields already have content. Clear the field you want to generate.');
   if (data.mode === 'question' && !data.source.trim()) return message('generation-message', 'Paste source text first, or choose a practice source and question.');
   setBusy(true, 'generate');
@@ -91,7 +92,7 @@ $('grade-button').addEventListener('click', async () => {
   if (busy) return;
   message('feedback-message', '');
   const data = payload(), submittedSnapshot = snapshot();
-  if (!$('api-key').value.trim()) return message('feedback-message', `Enter your ${keyName()} in the classroom panel.`);
+  if (!hasKey()) return message('feedback-message', `Enter your ${keyName()} in the classroom panel.`);
   if (!data.source.trim() || !data.paragraph.trim()) return message('feedback-message', 'Add both source text and an analytical paragraph.');
   setBusy(true, 'feedback');
   try {
@@ -116,7 +117,7 @@ $('tutor-send').addEventListener('click', async () => {
   if (busy) return;
   message('tutor-message','');
   const data = payload(), submitted = snapshot(), question = $('tutor-question').value.trim();
-  if (!$('api-key').value.trim()) return message('tutor-message',`Enter your ${keyName()} in the classroom panel.`);
+  if (!hasKey()) return message('tutor-message',`Enter your ${keyName()} in the classroom panel.`);
   if (!data.source.trim() || !data.paragraph.trim()) return message('tutor-message','Add source text and your paragraph before asking for a hint.');
   if (!question) return message('tutor-message','Ask a writing question first.');
   setBusy(true,'tutor');

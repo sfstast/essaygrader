@@ -20,6 +20,7 @@ def providers():
         {'id': 'nvidia', 'label': 'NVIDIA Nemotron (hosted)', 'model': NVIDIA_MODEL, 'key_label': 'NVIDIA API key'},
         {'id': 'open_model', 'label': 'Open model / fine-tuned adapter',
          'model': os.getenv('OPEN_MODEL_NAME', SMALL_MODEL), 'key_label': 'Model server key',
+         'server_key_configured': bool(os.getenv('OPEN_MODEL_API_KEY')),
          'configured': bool(os.getenv('OPEN_MODEL_BASE_URL'))},
     ]
 
@@ -38,7 +39,8 @@ def request_open_text(key, model, system, message, *, provider, max_tokens=4096)
     if (url.scheme != 'https' and not (url.scheme == 'http' and local)) or not url.netloc or url.username or url.password or url.query or url.fragment:
         raise ModelRequestError('The model server URL is not configured correctly.', 400)
     try:
-        with httpx.Client(timeout=90.0, follow_redirects=False) as client:
+        timeout = 300.0 if provider == 'open_model' else 90.0
+        with httpx.Client(timeout=timeout, follow_redirects=False) as client:
             response = client.post(base_url + '/chat/completions', headers={'Authorization': 'Bearer ' + key},
                                    json={'model': model, 'temperature': 0, 'max_tokens': max_tokens,
                                          'messages': [{'role': 'system', 'content': system},

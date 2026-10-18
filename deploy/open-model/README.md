@@ -9,9 +9,12 @@ ADAPTER_PATH it serves the original base instruction model, not a trained grader
 The previous adapter has not demonstrated reliable grading accuracy.
 
 Create a Hugging Face Docker Space with CPU Basic hardware and copy this
-directory's files into its root. This uses free CPU hardware; inference is slow
-and the space may sleep. An end-to-end model run has not yet been verified.
-Do not select paid hardware unless you intend to pay for it.
+directory's files into its root. Inference is slow and the space may sleep.
+On this account, Hugging Face currently requires a PRO subscription to create
+a Docker Space on CPU Basic (API returned HTTP 402). Deployment is blocked
+until the account meets that requirement or another host is supplied. No
+subscription or paid hardware has been purchased. An end-to-end model run
+has not yet been verified.
 
 In Space Settings, add a secret MODEL_SERVER_KEY with a random value of at
 least 32 characters. Generate one locally with
@@ -23,6 +26,10 @@ adapter_model.safetensors to an adapter directory, then set ADAPTER_PATH to
 /app/adapter. A public Space exposes repository files: use a private Space for
 weights you do not intend to publish. Supply both adapter files before enabling
 this setting. The base-model revision must match the adapter's training run.
+
+Alternatively, store the adapter in a private Hugging Face model repository,
+set ADAPTER_REPO to its repository ID and add an HF_TOKEN Space secret with
+read access to that repository. This keeps weights out of the public Space.
 
 After the Space starts, check https://YOUR-SPACE.hf.space/health. On the existing
 Render website service, set these environment variables and redeploy:
