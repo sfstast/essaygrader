@@ -8,3 +8,22 @@ model_work/data/
 model_work/prepared/
 model_work/runs/
 model_work/adapters/
+
+# Local account data, logs, credentials, and uploaded model weights
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.log
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.safetensors
+credentials.json
+*_credentials.json
+service-account*.json
+.ipynb_checkpoints/
