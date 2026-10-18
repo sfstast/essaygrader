@@ -91,3 +91,19 @@ class AccountTests(unittest.TestCase):
             self.assertEqual(self.signup().status_code,503)
         with patch.dict(os.environ,{'DATABASE_URL':'sqlite:///ephemeral.db','RENDER':'true'}):
             self.assertFalse(accounts.available())
+
+    def test_malformed_database_configuration_disables_accounts_without_leaking_value(self):
+        with patch.dict(os.environ, {'DATABASE_URL':'a-private-value-that-is-not-a-url','RENDER':'true'}):
+            response=self.client.get('/api/account/me')
+            self.assertEqual(response.status_code,200)
+            self.assertFalse(response.json()['available'])
+            self.assertIn('DATABASE_URL',response.json()['storage_message'])
+            self.assertNotIn('a-private-value',response.text)
+            self.assertEqual(self.signup().status_code,503)
+
+    def test_guest_availability_checks_database_connectivity(self):
+        from sqlalchemy.exc import SQLAlchemyError
+        with patch('accounts.engine',side_effect=SQLAlchemyError('private-connection-string')):
+            response=self.client.get('/api/account/me')
+        self.assertFalse(response.json()['available'])
+        self.assertNotIn('private-connection-string',response.text)

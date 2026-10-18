@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Column, ForeignKey, Integer, MetaData, String, Table, create_engine, delete, insert, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.engine import make_url
 from sqlalchemy.pool import StaticPool
 
 router = APIRouter(prefix='/api/account')
@@ -49,13 +50,21 @@ def database_url():
 
 
 def available():
-    return bool(database_url())
+    url = database_url()
+    if not url:
+        return False
+    try:
+        parsed = make_url(url)
+        return parsed.drivername in ('postgresql+psycopg', 'sqlite') and (
+            bool(parsed.host and parsed.database) if parsed.drivername == 'postgresql+psycopg' else True)
+    except (SQLAlchemyError, ValueError):
+        return False
 
 
 @lru_cache(maxsize=2)
 def engine_for(url):
-    if not url:
-        raise HTTPException(503, 'Accounts are waiting for a persistent database connection. You can practice as a guest.')
+    if not url or not available():
+        raise HTTPException(503, 'Accounts need a valid PostgreSQL connection URL in Render’s DATABASE_URL setting. You can practice as a guest.')
     options = {'pool_pre_ping': True}
     if url.startswith('sqlite'):
         options['connect_args'] = {'check_same_thread': False}
@@ -183,11 +192,21 @@ class Profile(BaseModel):
 @router.get('/me')
 def me(request: Request):
     from social_auth import provider_status
+    status = {'available':False, 'user':None, 'social_providers':provider_status()}
+    if not available():
+        status['storage_message'] = ('Account setup needs a valid PostgreSQL connection URL in Render’s DATABASE_URL setting.'
+                                     if os.getenv('DATABASE_URL', '').strip() else
+                                     'Accounts need a persistent database connection. Guest practice is available.')
+        return status
     try:
+        # A configured string alone does not establish that accounts can be saved.
+        with engine().connect() as connection:
+            connection.execute(select(1))
         user = current_user(request)
-        return {'available':available(), 'user':public_user(user) if user else None, 'social_providers':provider_status()}
+        return {**status, 'available':True, 'user':public_user(user) if user else None}
     except (HTTPException, SQLAlchemyError):
-        return {'available':False, 'user':None, 'social_providers':provider_status()}
+        status['storage_message'] = 'The account database could not be reached. Please try again later; guest practice still works.'
+        return status
 
 
 @router.post('/signup')

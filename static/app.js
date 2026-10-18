@@ -438,7 +438,7 @@ function updateAccount() {
   const providers=accountState.social_providers || [];
   document.querySelectorAll('[data-social-provider]').forEach(button=>{const provider=providers.find(row=>row.id===button.dataset.socialProvider);button.disabled=!accountState.available || !provider?.ready;button.title=provider?.ready?'Sign in securely with '+provider.label:'Not enabled yet';});
   $('social-status').textContent=accountState.available && providers.some(row=>row.ready)?'New here? Continuing creates your account. Use the same sign-in method next time.':'Google, Apple and Microsoft sign-in are awaiting account setup.';
-  $('account-storage-note').textContent=accountState.available ? 'An optional account saves your learning goal and recent practice results. Your API key and drafts are never saved.' : 'Accounts are prepared, but a persistent database still needs to be connected. All practice tools work as a guest.';
+  $('account-storage-note').textContent=accountState.available ? 'An optional account saves your learning goal and recent practice results. Your API key and drafts are never saved.' : (accountState.storage_message || 'Accounts need a persistent database connection. All practice tools work as a guest.');
   if(user) $('account-greeting').textContent='Welcome, '+user.display_name+'.';
 }
 async function loadAccount(applyProfile=false) {
