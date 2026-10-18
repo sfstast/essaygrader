@@ -191,15 +191,22 @@ def generate_material(api_key: str, model: str, grade: str, class_level: str, to
         'source_length': '180–300 words; use 120–180 words for Grades 6–8',
         'instructions': 'If only generating a source, make it support the existing question. If only generating a question, ground it in the existing source.',
     })
-    raw = (request_fn or request_text)(api_key, model, system, message)
-    if raw.startswith('```'):
-        raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError('The generated assignment was not in the expected format. Your inputs are unchanged; try again.') from exc
-    if not isinstance(data, dict) or any(not isinstance(data.get(k), str) for k in ('source', 'question')):
-        raise ValueError('The generated assignment was incomplete. Your inputs are unchanged; try again.')
-    if (need_source and not data['source'].strip()) or (need_question and not data['question'].strip()):
-        raise ValueError('The generated assignment was empty. Your inputs are unchanged; try again.')
-    return data
+    minimum_words = 120 if grade in ('Grade 6', 'Grade 7', 'Grade 8') else 180
+    if need_source:
+        system += f'\nThe generated source must contain at least {minimum_words} words across multiple paragraphs. A sentence or outline is not a passage.'
+    for attempt in range(2):
+        raw = (request_fn or request_text)(api_key, model, system, message)
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError('The generated assignment was not in the expected format. Your inputs are unchanged; try again.') from exc
+        if not isinstance(data, dict) or any(not isinstance(data.get(k), str) for k in ('source', 'question')):
+            raise ValueError('The generated assignment was incomplete. Your inputs are unchanged; try again.')
+        if (need_source and not data['source'].strip()) or (need_question and not data['question'].strip()):
+            raise ValueError('The generated assignment was empty. Your inputs are unchanged; try again.')
+        if not need_source or len(data['source'].split()) >= minimum_words:
+            return data
+        system += f'\nYour previous source was too short. Write a complete original passage of at least {minimum_words} words, with specific details a student can analyze. Return the same JSON format.'
+    raise ValueError('The model produced a passage that was too short, even after retrying. Your inputs are unchanged. Try Claude or paste your own source text.')
