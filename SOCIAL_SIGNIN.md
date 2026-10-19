@@ -34,6 +34,42 @@ The server requests `openid profile`. It does not request offline access or
 keep Google access/refresh tokens. Registration does not require a paid compute
 service, but review Google's current terms in your account.
 
+### Finish Google sign-in on Render
+
+1. In your Google Cloud project, open **Google Auth Platform → Branding** and
+   enter the app name, support email, and developer contact email.
+2. Under **Audience**, choose Internal only for an app restricted to your Google
+   Workspace organization; otherwise choose External. While the app is in
+   Testing, add the Google accounts you will use under **Test users**. Publish
+   the app when you are ready for the intended audience.
+3. Under **Clients**, create the Web application client using the exact origin
+   and redirect URI above. The redirect URI includes `/callback`, with no trailing
+   slash. A different deployed domain needs matching URLs in Google and Render.
+4. In the Render web service's **Environment**, set:
+
+   | Setting | Value |
+   | --- | --- |
+   | `GOOGLE_CLIENT_ID` | The web client's ID from Google |
+   | `GOOGLE_CLIENT_SECRET` | The web client's secret from Google |
+   | `PUBLIC_BASE_URL` | `https://reasoning-studio.onrender.com` |
+   | `OAUTH_SESSION_SECRET` | A stable, random secret of at least 32 characters |
+   | `DATABASE_URL` | Your persistent PostgreSQL connection URL |
+
+   Generate the session secret in a password manager or with
+   `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Put it directly
+   in Render; do not commit it or paste it into chat.
+5. Save and redeploy. Open **Account → Continue with Google**, allow the popup,
+   and complete consent with an allowed Google account. Sign out and sign in
+   again to confirm the same account returns.
+
+If the Google button is disabled, check the two Google credentials, session
+secret, and database connection. `/api/account/me` reports account availability
+and provider readiness without exposing credentials. `redirect_uri_mismatch`
+means the Google client's redirect URI differs from the URL above (or your
+configured domain). An audience/access error usually means the account needs to
+be added as a test user or the audience settings need updating. A successful
+mocked test does not confirm this final live consent step.
+
 ## Apple
 
 Apple requires access to its developer identifiers and a primary App ID enabled

@@ -29,3 +29,63 @@
 @media(max-width:680px){.sentence-coach{padding:18px 16px}.sentence-coach ol{font-size:12px}.topic-controls{align-items:stretch;flex-wrap:wrap}.topic-controls button{padding:9px 13px;font-size:11px}.sentence-topic-box{padding:0 14px 10px}.topic-prompt{font-size:12px}.site-footer{margin-top:40px;padding-top:26px}.footer-main{gap:26px 20px}.footer-main nav:last-child{grid-column:1/-1}.footer-bottom{flex-direction:column;gap:10px}.footer-main .brand{font-size:19px}}
 .footer-main nav>a{display:inline-flex;align-items:center;gap:6px}.footer-main nav>a svg{flex-shrink:0}
 .practice-score{display:inline-block;background:#eee9f8;color:#685187;border:1px solid #dfd5ef;border-radius:12px;padding:10px 18px;font-size:26px;font-weight:700;letter-spacing:-.5px;margin-top:12px}.vocab-score{font-size:20px}
+
+/* Shared spacing and responsive work surfaces. */
+:root{--muted:#666b80}
+.welcome{padding-top:44px}
+.welcome-hero{gap:56px;margin-bottom:32px}
+.welcome-intro h1{letter-spacing:-2px}
+.goal-panel{padding:32px;border-radius:20px}
+.goal-choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0}
+.goal-card{flex-direction:row;align-items:center;gap:16px;padding:20px 38px 20px 18px;min-height:104px}
+.goal-card strong{font-size:14px}
+.goal-card small{font-size:12px;line-height:1.6;max-width:290px}
+.goal-card:hover{border-color:#b6a8d4;background:#faf8fe}
+.goal-check{top:18px;right:14px}
+.goal-icon{height:42px;width:42px;border-radius:12px}
+.welcome-preferences{padding-top:20px;border-top:1px solid var(--line);grid-template-columns:minmax(0,1fr) 210px}
+.goal-panel #start-learning{max-width:none;display:flex;min-height:48px}
+.goal-panel>.centered{font-size:12px;max-width:600px;margin:14px auto 0}
+.workspace-toolbar{align-items:center;gap:24px}
+.workspace-toolbar>div{min-width:0}
+.workspace-toolbar nav{background:#eeedf4;border-radius:12px;padding:5px;gap:3px}
+.workspace-toolbar nav a{font-size:13px;padding:9px 14px}
+.workspace-toolbar nav a.active{background:#fff;border-color:#e4e0ee;box-shadow:0 2px 5px #25294208}
+.workspace>.editor{max-width:none}
+#writing-tools{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+#writing-tools>.panel{min-width:0;height:100%}
+#writing-tools .panel-heading{min-height:72px}
+#writing-tools #source{min-height:260px}
+#writing-tools #paragraph{min-height:300px}
+.panel-heading h2{font-size:20px}
+.editor-footer,.small{font-size:12px}
+.site-footer{max-width:1040px;margin-left:auto;margin-right:auto}
+@media(max-width:900px){
+  .workspace-toolbar{align-items:flex-start;flex-direction:column;gap:14px}
+  #writing-tools{grid-template-columns:1fr}
+  #writing-tools .panel-heading{min-height:0}
+}
+@media(max-width:680px){
+  .welcome{padding-top:28px}
+  .welcome-hero{grid-template-columns:minmax(0,1fr);gap:0;margin-bottom:26px}
+  .welcome-intro h1{font-size:38px;letter-spacing:-1.5px}
+  .welcome-intro>p{font-size:14px;line-height:1.8;max-width:420px}
+  .welcome-story{display:none}
+  .goal-panel{padding:22px 18px}
+  .goal-panel h2{font-size:23px}
+  .goal-choices{grid-template-columns:1fr;gap:10px;margin:20px 0}
+  .goal-card{min-height:92px;padding:16px 32px 16px 14px;gap:12px}
+  .goal-card strong{font-size:14px}
+  .goal-card small{font-size:12px}
+  .goal-icon{width:36px;height:36px}
+  .welcome-preferences{grid-template-columns:1fr;padding-top:18px}
+  .workspace-toolbar nav{width:100%;gap:5px}
+  .workspace-toolbar nav a{font-size:12px;padding:10px 6px;white-space:normal}
+  .workspace-toolbar nav a.change-goal{padding-left:8px}
+  .classroom-levels{grid-template-columns:1fr;gap:0}
+  .pattern-choices{grid-template-columns:1fr}
+  .pattern-choice{font-size:12px}
+  #writing-tools #source{min-height:200px}
+  #writing-tools #paragraph{min-height:260px}
+  .panel-heading h2{font-size:19px}
+}
